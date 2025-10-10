@@ -1,0 +1,4 @@
+# ignore all files in infra/files except *.gpg
+infra/files/*
+!infra/files/*.gpg
+!infra/files/*.pub.*
