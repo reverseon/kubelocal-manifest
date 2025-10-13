@@ -6,4 +6,4 @@ resources:
   - ingress.yaml
   - rbac.yaml
   - token-secret.yaml
-  # - ingress-headers-cm.yaml
+  - ingress-headers-cm.yaml
