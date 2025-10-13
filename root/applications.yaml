@@ -1,0 +1,38 @@
+---
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: app-generator
+  namespace: argocd
+spec:
+  generators:
+  - git:
+      repoURL: https://github.com/reverseon/kubelocal-manifest.git
+      revision: main
+      directories:
+        - path: "cluster-utilities/argocd"
+        - path: "cluster-utilities/cert-manager"
+        - path: "cluster-utilities/sealed-secrets"
+        - path: "cluster-utilities/ingress-nginx"
+  template:
+    metadata:
+      name: '{{path.basename}}'
+    spec:
+      project: default
+      source:
+        repoURL: https://github.com/reverseon/kubelocal-manifest.git
+        targetRevision: main
+        path: "{{path.path}}"
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: '{{path.basename}}'
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        retry:
+          limit: 5
+          backoff:
+            duration: 5s
+            factor: 2
+            maxDuration: 3m

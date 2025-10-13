@@ -1,8 +1,0 @@
-apiVersion: argoproj.io/v1alpha1
-kind: Application
-metadata:
-  name: argocd-root-app
-  namespace: argocd-crds
-spec:
-  destination:
-    namespace: argocd

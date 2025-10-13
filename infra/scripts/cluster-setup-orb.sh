@@ -4,6 +4,7 @@
 
 G_SCRIPT_DIR=$(dirname $0)
 G_CLUSTER_UTILS_DIR=$G_SCRIPT_DIR/../../cluster-utilities
+G_ROOT_DIR=$G_SCRIPT_DIR/../../root
 
 # Pre-utilities
 
@@ -31,6 +32,8 @@ kubectl -n sealed-secrets rollout restart deployment.apps/sealed-secrets
 # Pre-bootstrap
 
 # Bootstrap
+
+kubectl apply -f $G_ROOT_DIR/root.yaml
 
 # Post-bootstrap
 
