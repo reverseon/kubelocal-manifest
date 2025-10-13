@@ -3,3 +3,4 @@ kind: Kustomization
 resources:
 - helm-k8s-dashboard.yaml
 - namespace.yaml
+- ingress.yaml
