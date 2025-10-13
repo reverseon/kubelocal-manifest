@@ -1,0 +1,9 @@
+repositories:
+ - name: kubernetes-dashboard
+   url: https://kubernetes.github.io/dashboard/
+
+releases:
+- name: kubernetes-dashboard
+  namespace: k8s-dashboard
+  chart: kubernetes-dashboard/kubernetes-dashboard
+  version: 7.13.0

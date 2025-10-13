@@ -13,6 +13,7 @@ spec:
         - path: "cluster-utilities/cert-manager"
         - path: "cluster-utilities/sealed-secrets"
         - path: "cluster-utilities/ingress-nginx"
+        - path: "cluster-utilities/k8s-dashboard"
   template:
     metadata:
       name: '{{path.basename}}'
