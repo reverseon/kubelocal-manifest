@@ -10,7 +10,6 @@ spec:
       repoURL: https://github.com/reverseon/kubelocal-manifest.git
       revision: main
       directories:
-        - path: "cluster-utilities/argocd"
         - path: "cluster-utilities/cert-manager"
         - path: "cluster-utilities/sealed-secrets"
         - path: "cluster-utilities/ingress-nginx"
