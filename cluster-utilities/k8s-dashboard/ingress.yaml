@@ -8,6 +8,7 @@ metadata:
     cert-manager.io/common-name: "dash.kube.ishiori.local"
     nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
     nginx.ingress.kubernetes.io/backend-protocol: "HTTPS"
+    nginx.ingress.kubernetes.io/proxy-set-headers: "k8s-dashboard/dash-proxy-headers"
 spec:
   ingressClassName: nginx
   rules:
