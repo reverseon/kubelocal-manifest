@@ -10,7 +10,7 @@ metadata:
 spec:
   ingressClassName: nginx
   rules:
-    - host: dashboard.kube.ishiori.local
+    - host: dash.kube.ishiori.local
       http:
         paths:
           - path: /
@@ -22,7 +22,7 @@ spec:
                   number: 443
   tls:
     - hosts:
-        - dashboard.kube.ishiori.local
+        - dash.kube.ishiori.local
       secretName: kubernetes-dashboard-tls
 
 
