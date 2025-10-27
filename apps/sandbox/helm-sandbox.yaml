@@ -97,7 +97,7 @@ metadata:
 type: Opaque
 data:
   rabbitmq-password: "dGVzdDEyMw=="
-  rabbitmq-erlang-cookie: "QVhHaGR0a0g3dW1oOG5VYmk3WjVvSFltN2lZWW5FRmY="
+  rabbitmq-erlang-cookie: "ZTRPZ1h0UzAwVFR1QXpTaGxyZWNGTlhRd0gweGs2OFI="
 ---
 # Source: rabbitmq/templates/role.yaml
 kind: Role
@@ -240,7 +240,7 @@ spec:
         helm.sh/chart: rabbitmq-16.0.8
       annotations:
         checksum/config: 39312b00c5b4e8415781467e3f9630f33d4ddff3f55cf07cb3c6264a034aca9d
-        checksum/secret: 6f83434670bcc718618063173558c92754b3267604151c256a99e59eb653eab0
+        checksum/secret: d0ec93dbfb184f24db72a23925199ded469c96f4632d688aed6bf4b0b7a4b1bc
     spec:
       
       serviceAccountName: rabbitmq
@@ -268,7 +268,7 @@ spec:
       enableServiceLinks: true
       initContainers:
         - name: prepare-plugins-dir
-          image: docker.io/bitnami/rabbitmq:latest
+          image: docker.io/bitnami/rabbitmq:4.1.1-debian-12-r2
           imagePullPolicy: "IfNotPresent"
           resources:
             limits:
@@ -309,7 +309,7 @@ spec:
               mountPath: /emptydir
       containers:
         - name: rabbitmq
-          image: docker.io/bitnami/rabbitmq:latest
+          image: docker.io/bitnami/rabbitmq:4.1.1-debian-12-r2
           imagePullPolicy: "IfNotPresent"
           securityContext:
             allowPrivilegeEscalation: false
