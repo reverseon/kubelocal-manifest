@@ -21,4 +21,26 @@ spec:
             # Official RabbitMQ image has plugins at /opt/rabbitmq/plugins
             mkdir -p /emptydir/app-plugins-dir
             cp -r /opt/rabbitmq/plugins/* /emptydir/app-plugins-dir/
+      containers:
+      - name: rabbitmq
+        livenessProbe:
+          exec:
+            command:
+              - rabbitmq-diagnostics
+              - -q
+              - ping
+          initialDelaySeconds: 120
+          periodSeconds: 30
+          timeoutSeconds: 20
+          failureThreshold: 6
+        readinessProbe:
+          exec:
+            command:
+              - rabbitmq-diagnostics
+              - -q
+              - check_running
+          initialDelaySeconds: 10
+          periodSeconds: 30
+          timeoutSeconds: 20
+          failureThreshold: 3
 
