@@ -97,7 +97,7 @@ metadata:
 type: Opaque
 data:
   rabbitmq-password: "dGVzdDEyMw=="
-  rabbitmq-erlang-cookie: "R0hrNUN0RElIUW50b3ZEbUxKUEhVNGNUS1VnSE5Sa2E="
+  rabbitmq-erlang-cookie: "SHU3YVFtUXFpY3lqazkxdXg5Nk5ZYWhkWUI2dUJSeno="
 ---
 # Source: rabbitmq/templates/role.yaml
 kind: Role
@@ -240,7 +240,7 @@ spec:
         helm.sh/chart: rabbitmq-16.0.8
       annotations:
         checksum/config: 39312b00c5b4e8415781467e3f9630f33d4ddff3f55cf07cb3c6264a034aca9d
-        checksum/secret: 309c271ccda2fda156874e08a8ff21982fcb56bbb61eabeb140a6b39726b46a1
+        checksum/secret: 034bad2c540f7a8ea5ef877736e93ed3d489c806d58eb59076cdd208b7d07508
     spec:
       
       serviceAccountName: rabbitmq
@@ -260,7 +260,7 @@ spec:
           
       automountServiceAccountToken: true
       securityContext:
-        fsGroup: 999
+        fsGroup: 1001
         fsGroupChangePolicy: Always
         supplementalGroups: []
         sysctls: []
@@ -285,9 +285,9 @@ spec:
               drop:
               - ALL
             readOnlyRootFilesystem: true
-            runAsGroup: 999
+            runAsGroup: 1001
             runAsNonRoot: true
-            runAsUser: 999
+            runAsUser: 1001
             seLinuxOptions: {}
             seccompProfile:
               type: RuntimeDefault
@@ -307,30 +307,6 @@ spec:
           volumeMounts:
             - name: empty-dir
               mountPath: /emptydir
-        - args:
-          - -ec
-          - |
-            #!/bin/bash
-            echo "Copying plugins dir to empty dir"
-            # Official RabbitMQ image has plugins at /opt/rabbitmq/plugins
-            cp -r /opt/rabbitmq/plugins/* /emptydir/app-plugins-dir/
-          command:
-          - /bin/bash
-          image: docker.io/rabbitmq:4.1.1-management
-          imagePullPolicy: IfNotPresent
-          name: prepare-plugins-dir
-          securityContext:
-            allowPrivilegeEscalation: false
-            capabilities:
-              drop:
-              - ALL
-            readOnlyRootFilesystem: true
-            runAsGroup: 999
-            runAsNonRoot: true
-            runAsUser: 999
-          volumeMounts:
-          - mountPath: /emptydir
-            name: empty-dir
       containers:
         - name: rabbitmq
           image: docker.io/rabbitmq:4.1.1-management
@@ -341,9 +317,9 @@ spec:
               drop:
               - ALL
             readOnlyRootFilesystem: true
-            runAsGroup: 999
+            runAsGroup: 1001
             runAsNonRoot: true
-            runAsUser: 999
+            runAsUser: 1001
             seLinuxOptions: {}
             seccompProfile:
               type: RuntimeDefault

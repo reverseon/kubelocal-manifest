@@ -5,3 +5,6 @@ namespace: sandbox
 resources:
 - namespace.yaml
 - helm-sandbox.yaml
+
+patchesStrategicMerge:
+- rabbitmq-patch.yaml
