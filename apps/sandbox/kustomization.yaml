@@ -13,5 +13,5 @@ resources:
 
 # Strategic merge patch to fix Bitnami chart incompatibilities with official Docker image
 # Patches: init container paths, authentication env vars, and health check commands
-#patchesStrategicMerge:
-# - rabbitmq-patch.yaml
+patchesStrategicMerge:
+- rabbitmq-patch.yaml
