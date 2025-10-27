@@ -4,9 +4,13 @@
 # The Bitnami chart expects the Bitnami image, so we use a Kustomize patch (rabbitmq-patch.yaml)
 # to make it compatible with the official image. See rabbitmq-patch.yaml for details.
 
+global:
+  security:
+    allowInsecureImages: true
+
 image:
   registry: docker.io
-  repository: bitnami/rabbitmq  # Official Docker image, not bitnami/rabbitmq
+  repository: bitnamilegacy/rabbitmq  # Official Docker image, not bitnami/rabbitmq
   tag: 4.1.1-debian-12-r2 # 4.1.1-management 
 
 # Authentication credentials
