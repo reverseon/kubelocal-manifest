@@ -1,11 +1,16 @@
+# RabbitMQ configuration using Bitnami Helm chart with official Docker image
+#
+# Note: This deployment uses the official Docker RabbitMQ image instead of the Bitnami image.
+# The Bitnami chart expects the Bitnami image, so we use a Kustomize patch (rabbitmq-patch.yaml)
+# to make it compatible with the official image. See rabbitmq-patch.yaml for details.
+
 image:
   registry: docker.io
-  repository: rabbitmq
-  tag: 4.1.1-management
+  repository: bitnami/rabbitmq  # Official Docker image, not bitnami/rabbitmq
+  tag: latest # 4.1.1-management 
 
-# Auth credentials for RabbitMQ
-# Note: The Bitnami chart's RABBITMQ_USERNAME/RABBITMQ_PASSWORD_FILE don't work 
-# with the official Docker image. The Kustomize patch (rabbitmq-patch.yaml) adds
-# RABBITMQ_DEFAULT_USER and RABBITMQ_DEFAULT_PASS using these same values.
+# Authentication credentials
+# These are used by the Bitnami chart to generate secrets, and the Kustomize patch
+# converts them to RABBITMQ_DEFAULT_USER/RABBITMQ_DEFAULT_PASS for the official image.
 auth:
-  password: test123
+  password: test123   
