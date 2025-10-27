@@ -19,5 +19,6 @@ spec:
             # In order to not break the possibility of installing custom plugins, we need
             # to make the plugins directory writable, so we need to copy it to an empty dir volume
             # Official RabbitMQ image has plugins at /opt/rabbitmq/plugins
+            mkdir -p /emptydir/app-plugins-dir
             cp -r /opt/rabbitmq/plugins/* /emptydir/app-plugins-dir/
 
