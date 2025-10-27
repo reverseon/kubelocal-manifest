@@ -5,3 +5,39 @@ image:
 
 auth:
   password: test123
+
+# Override security contexts for official RabbitMQ image (runs as UID 999, not 1001)
+podSecurityContext:
+  fsGroup: 999
+  
+containerSecurityContext:
+  runAsUser: 999
+  runAsGroup: 999
+  runAsNonRoot: true
+  
+# Override the init container to work with official RabbitMQ image paths
+initContainers:
+  - name: prepare-plugins-dir
+    image: docker.io/rabbitmq:4.1.1-management
+    imagePullPolicy: IfNotPresent
+    command:
+      - /bin/bash
+    args:
+      - -ec
+      - |
+        #!/bin/bash
+        echo "Copying plugins dir to empty dir"
+        # Official RabbitMQ image has plugins at /opt/rabbitmq/plugins
+        cp -r /opt/rabbitmq/plugins/* /emptydir/app-plugins-dir/
+    volumeMounts:
+      - name: empty-dir
+        mountPath: /emptydir
+    securityContext:
+      runAsUser: 999
+      runAsGroup: 999
+      runAsNonRoot: true
+      allowPrivilegeEscalation: false
+      readOnlyRootFilesystem: true
+      capabilities:
+        drop:
+        - ALL
