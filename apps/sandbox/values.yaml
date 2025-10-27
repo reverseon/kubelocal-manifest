@@ -3,5 +3,9 @@ image:
   repository: rabbitmq
   tag: 4.1.1-management
 
+# Auth credentials for RabbitMQ
+# Note: The Bitnami chart's RABBITMQ_USERNAME/RABBITMQ_PASSWORD_FILE don't work 
+# with the official Docker image. The Kustomize patch (rabbitmq-patch.yaml) adds
+# RABBITMQ_DEFAULT_USER and RABBITMQ_DEFAULT_PASS using these same values.
 auth:
   password: test123
