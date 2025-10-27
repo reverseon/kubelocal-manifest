@@ -14,6 +14,7 @@ spec:
         - path: "cluster-utilities/sealed-secrets"
         - path: "cluster-utilities/ingress-nginx"
         - path: "cluster-utilities/k8s-dashboard"
+        - path: "apps/sandbox"
   template:
     metadata:
       name: '{{path.basename}}'

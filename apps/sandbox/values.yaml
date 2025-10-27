@@ -1,0 +1,7 @@
+image:
+  registry: docker.io
+  repository: rabbitmq
+  tag: 4.1.1-management
+
+auth:
+  password: test123
