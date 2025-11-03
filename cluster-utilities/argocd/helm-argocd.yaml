@@ -146,7 +146,7 @@ data:
   admin.enabled: "true"
   application.instanceLabelKey: argocd.argoproj.io/instance
   application.sync.impersonation.enabled: "false"
-  exec.enabled: "false"
+  exec.enabled: "true"
   resource.customizations.ignoreResourceUpdates.ConfigMap: |
     jqPathExpressions:
       # Ignore the cluster-autoscaler status
@@ -24545,6 +24545,12 @@ rules:
     verbs:
       - get     # supports viewing pod logs from UI
   - apiGroups:
+      - ""
+    resources:
+      - pods/exec
+    verbs:
+      - create
+  - apiGroups:
       - argoproj.io
     resources:
       - applications
@@ -24902,6 +24908,12 @@ rules:
   verbs:
   - create
   - list
+- apiGroups:
+  - ""
+  resources:
+  - pods/exec
+  verbs:
+  - create
 ---
 # Source: argo-cd/templates/dex/role.yaml
 apiVersion: rbac.authorization.k8s.io/v1
@@ -25638,7 +25650,7 @@ spec:
     metadata:
       annotations:
         checksum/cmd-params: 5affa1f07293b96dd6fe3a7c0c94f73bc28d0373a3dcd8e0ce44b565f415a4d9
-        checksum/cm: d1f241bb7ea9d6ee6a2d43eb0599c8c977cba301e8112e56bd8f8cf4e1c7cd67
+        checksum/cm: 9a0461f3e956a2a3cb40a0b85abc3fd5a6c5ce848cdd71e4a02224b4339c0ee3
       labels:
         helm.sh/chart: argo-cd-8.5.9
         app.kubernetes.io/name: argocd-repo-server
@@ -26053,7 +26065,7 @@ spec:
     metadata:
       annotations:
         checksum/cmd-params: 5affa1f07293b96dd6fe3a7c0c94f73bc28d0373a3dcd8e0ce44b565f415a4d9
-        checksum/cm: d1f241bb7ea9d6ee6a2d43eb0599c8c977cba301e8112e56bd8f8cf4e1c7cd67
+        checksum/cm: 9a0461f3e956a2a3cb40a0b85abc3fd5a6c5ce848cdd71e4a02224b4339c0ee3
       labels:
         helm.sh/chart: argo-cd-8.5.9
         app.kubernetes.io/name: argocd-server
@@ -26757,7 +26769,7 @@ spec:
     metadata:
       annotations:
         checksum/cmd-params: 5affa1f07293b96dd6fe3a7c0c94f73bc28d0373a3dcd8e0ce44b565f415a4d9
-        checksum/cm: d1f241bb7ea9d6ee6a2d43eb0599c8c977cba301e8112e56bd8f8cf4e1c7cd67
+        checksum/cm: 9a0461f3e956a2a3cb40a0b85abc3fd5a6c5ce848cdd71e4a02224b4339c0ee3
       labels:
         helm.sh/chart: argo-cd-8.5.9
         app.kubernetes.io/name: argocd-application-controller

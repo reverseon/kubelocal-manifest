@@ -6,6 +6,20 @@ G_SCRIPT_DIR=$(dirname $0)
 G_CLUSTER_UTILS_DIR=$G_SCRIPT_DIR/../../cluster-utilities
 G_ROOT_DIR=$G_SCRIPT_DIR/../../root
 
+# Pre-flight checks
+
+echo "Current Kubernetes context:"
+kubectl config current-context
+echo ""
+kubectl auth whoami
+echo ""
+
+read "REPLY?Continue with cluster setup? (y/N): "
+if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+    echo "Aborted."
+    exit 1
+fi
+
 # Pre-utilities
 
 # Utilities
