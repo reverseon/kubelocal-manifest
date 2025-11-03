@@ -1,0 +1,38 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: demo-app-sidekiq
+  namespace: sandbox
+  labels:
+    app: demo-app
+    component: sidekiq
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: demo-app
+      component: sidekiq
+  template:
+    metadata:
+      labels:
+        app: demo-app
+        component: sidekiq
+    spec:
+      containers:
+      - name: sidekiq
+        image: demo-app:latest
+        imagePullPolicy: IfNotPresent
+        command: ["bundle"]
+        args: ["exec", "sidekiq"]
+        env:
+        - name: RAILS_ENV
+          value: "current"
+        - name: RACK_ENV
+          value: "current"
+        - name: session_sentinel_host
+          value: "host.orb.internal"
+        - name: sidekiq_sentinel_host
+          value: "host.orb.internal"
+        - name: misc_sentinel_host
+          value: "host.orb.internal"
+
