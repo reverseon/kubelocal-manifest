@@ -35,4 +35,6 @@ spec:
           value: "host.orb.internal"
         - name: misc_sentinel_host
           value: "host.orb.internal"
+        - name: KEYCLOAK_URL
+          value: "http://host.orb.internal:8080"
 
