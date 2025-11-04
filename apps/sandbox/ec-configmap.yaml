@@ -6,11 +6,11 @@ metadata:
 data:
   RAILS_ENV: "nonclustermode"
   RACK_ENV: "nonclustermode"
-  REDIS_SESSION_WRITER_HOST: "host.orb.internal"
-  REDIS_SESSION_WRITER_PORT: "6370"
-  REDIS_SIDEKIQ_WRITER_HOST: "host.orb.internal"
-  REDIS_SIDEKIQ_WRITER_PORT: "6370"
-  REDIS_MISC_WRITER_HOST: "host.orb.internal"
-  REDIS_MISC_WRITER_PORT: "6370"
+  REDIS_SESSION_WRITER_HOST: "master.ishiori-valkey.v1wvan.apne1.cache.amazonaws.com"
+  REDIS_SESSION_WRITER_PORT: "6379"
+  REDIS_SIDEKIQ_WRITER_HOST: "master.ishiori-valkey.v1wvan.apne1.cache.amazonaws.com"
+  REDIS_SIDEKIQ_WRITER_PORT: "6379"
+  REDIS_MISC_WRITER_HOST: "master.ishiori-valkey.v1wvan.apne1.cache.amazonaws.com"
+  REDIS_MISC_WRITER_PORT: "6379"
   KEYCLOAK_URL: "http://host.orb.internal:8080"
 
