@@ -24,17 +24,9 @@ spec:
         imagePullPolicy: IfNotPresent
         command: ["bundle"]
         args: ["exec", "puma", "-C", "config/puma.rb"]
-        env:
-        - name: RAILS_ENV
-          value: "current"
-        - name: RACK_ENV
-          value: "current"
-        - name: REDIS_SESSION_SENTINEL_HOST
-          value: "host.orb.internal"
-        - name: REDIS_SIDEKIQ_SENTINEL_HOST
-          value: "host.orb.internal"
-        - name: REDIS_MISC_SENTINEL_HOST
-          value: "host.orb.internal"
-        - name: KEYCLOAK_URL
-          value: "http://host.orb.internal:8080"
+        envFrom:
+        - configMapRef:
+            name: current-configmap
+        - configMapRef:
+            name: ec-configmap
 

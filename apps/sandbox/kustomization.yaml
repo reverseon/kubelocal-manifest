@@ -4,6 +4,8 @@ namespace: sandbox
 
 resources:
 - namespace.yaml
+- current-configmap.yaml
+- ec-configmap.yaml
 - demo-app-puma.yaml
 - demo-app-puma-service.yaml
 - demo-app-sidekiq.yaml

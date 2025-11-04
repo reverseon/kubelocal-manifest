@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: current-configmap
+  namespace: sandbox
+data:
+  RAILS_ENV: "current"
+  RACK_ENV: "current"
+  REDIS_SESSION_SENTINEL_HOST: "host.orb.internal"
+  REDIS_SIDEKIQ_SENTINEL_HOST: "host.orb.internal"
+  REDIS_MISC_SENTINEL_HOST: "host.orb.internal"
+  KEYCLOAK_URL: "http://host.orb.internal:8080"
+
