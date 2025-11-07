@@ -26,5 +26,5 @@ spec:
         args: ["exec", "puma", "-C", "config/puma.rb"]
         envFrom:
         - configMapRef:
-            name: ec-configmap
+            name: current-configmap
 

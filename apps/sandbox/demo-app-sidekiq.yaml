@@ -27,6 +27,4 @@ spec:
         envFrom:
         - configMapRef:
             name: current-configmap
-        - configMapRef:
-            name: ec-configmap
 
