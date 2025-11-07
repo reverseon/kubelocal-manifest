@@ -17,6 +17,6 @@ data:
   REDIS_MISC_SENTINEL_HOST: "host.orb.internal"
   REDIS_MISC_WRITER_HOST: "master.ishiori-valkey.v1wvan.apne1.cache.amazonaws.com"
   REDIS_MISC_WRITER_PORT: "6379"
-  REDIS_MISC_IS_ELASTICACHE: "false"
+  REDIS_MISC_IS_ELASTICACHE: "true"
   KEYCLOAK_URL: "http://host.orb.internal:8080"
 
