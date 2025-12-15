@@ -244,7 +244,7 @@ data:
   statusbadge.enabled: "false"
   timeout.hard.reconciliation: 0s
   timeout.reconciliation: 180s
-  url: https://argocd.kube.ishiori.local
+  url: https://argocd.kube.ishiori.lnet
 ---
 # Source: argo-cd/templates/argocd-configs/argocd-cmd-params-cm.yaml
 apiVersion: v1
@@ -333,7 +333,7 @@ metadata:
     app.kubernetes.io/version: "v3.1.8"
 data:
   context: |
-    argocdUrl: https://argocd.kube.ishiori.local
+    argocdUrl: https://argocd.kube.ishiori.lnet
 ---
 # Source: argo-cd/templates/argocd-configs/argocd-rbac-cm.yaml
 apiVersion: v1
@@ -27152,12 +27152,12 @@ metadata:
     app.kubernetes.io/version: "v3.1.8"
   annotations:
     cert-manager.io/cluster-issuer: "ishiori-local-general-issuer"
-    cert-manager.io/common-name: "argocd.kube.ishiori.local"
+    cert-manager.io/common-name: "argocd.kube.ishiori.lnet"
     nginx.ingress.kubernetes.io/backend-protocol: "GRPC"
 spec:
   ingressClassName: nginx
   rules:
-    - host: grpc.argocd.kube.ishiori.local
+    - host: grpc.argocd.kube.ishiori.lnet
       http:
         paths:
           - path: /
@@ -27169,7 +27169,7 @@ spec:
                   number: 443
   tls:
     - hosts:
-      - grpc.argocd.kube.ishiori.local
+      - grpc.argocd.kube.ishiori.lnet
       secretName: argocd-server-grpc-tls
 ---
 # Source: argo-cd/templates/argocd-server/ingress.yaml
@@ -27188,13 +27188,13 @@ metadata:
     app.kubernetes.io/version: "v3.1.8"
   annotations:
     cert-manager.io/cluster-issuer: "ishiori-local-general-issuer"
-    cert-manager.io/common-name: "argocd.kube.ishiori.local"
+    cert-manager.io/common-name: "argocd.kube.ishiori.lnet"
     nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
     nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
 spec:
   ingressClassName: nginx
   rules:
-    - host: argocd.kube.ishiori.local
+    - host: argocd.kube.ishiori.lnet
       http:
         paths:
           - path: /
@@ -27206,7 +27206,7 @@ spec:
                   number: 80
   tls:
     - hosts:
-      - argocd.kube.ishiori.local
+      - argocd.kube.ishiori.lnet
       secretName: argocd-server-tls
 ---
 # Source: argo-cd/templates/redis-secret-init/serviceaccount.yaml

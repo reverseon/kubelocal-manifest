@@ -5,13 +5,13 @@ metadata:
   namespace: k8s-dashboard
   annotations:
     cert-manager.io/cluster-issuer: "ishiori-local-general-issuer"
-    cert-manager.io/common-name: "dash.kube.ishiori.local"
+    cert-manager.io/common-name: "dash.kube.ishiori.lnet"
     nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
     nginx.ingress.kubernetes.io/backend-protocol: "HTTPS"
 spec:
   ingressClassName: nginx
   rules:
-    - host: dash.kube.ishiori.local
+    - host: dash.kube.ishiori.lnet
       http:
         paths:
           - path: /
@@ -23,7 +23,7 @@ spec:
                   number: 443
   tls:
     - hosts:
-        - dash.kube.ishiori.local
+        - dash.kube.ishiori.lnet
       secretName: kubernetes-dashboard-tls
 
 

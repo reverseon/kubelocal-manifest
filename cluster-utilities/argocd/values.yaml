@@ -1,5 +1,5 @@
 global:
-  domain: argocd.kube.ishiori.local 
+  domain: argocd.kube.ishiori.lnet 
 
 server:
   ingress:
@@ -7,27 +7,27 @@ server:
     ingressClassName: nginx
     annotations:
       cert-manager.io/cluster-issuer: ishiori-local-general-issuer
-      cert-manager.io/common-name: argocd.kube.ishiori.local
+      cert-manager.io/common-name: argocd.kube.ishiori.lnet
       nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
       nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
     hosts:
-      - argocd.kube.ishiori.local
+      - argocd.kube.ishiori.lnet
     tls:
       - hosts:
-        - argocd.kube.ishiori.local
+        - argocd.kube.ishiori.lnet
         secretName: argocd-tls
   ingressGrpc:
     enabled: true
     ingressClassName: nginx
     annotations:
       cert-manager.io/cluster-issuer: ishiori-local-general-issuer
-      cert-manager.io/common-name: argocd.kube.ishiori.local
+      cert-manager.io/common-name: argocd.kube.ishiori.lnet
       nginx.ingress.kubernetes.io/backend-protocol: "GRPC"
     hosts:
-      - argocd.kube.ishiori.local
+      - argocd.kube.ishiori.lnet
     tls:
       - hosts:
-        - argocd.kube.ishiori.local
+        - argocd.kube.ishiori.lnet
         secretName: argocd-tls
 
 configs:
