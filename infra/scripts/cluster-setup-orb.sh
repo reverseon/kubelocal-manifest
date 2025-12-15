@@ -39,7 +39,7 @@ kubectl -n argocd patch secret argocd-secret \
     "admin.passwordMtime": "'"$(date -u +%FT%TZ)"'"
   }}'
 
-kubectl -n sealed-secrets create secret tls general-tls --cert $G_SCRIPT_DIR/../files/crt.pub.pem --key $G_SCRIPT_DIR/../files/key.pem
+kubectl -n sealed-secrets create secret tls general-tls --cert $G_SCRIPT_DIR/../files/crt.pub.pem --key <(gpg -dq $G_SCRIPT_DIR/../files/key.pem.gpg)
 kubectl -n sealed-secrets label secret general-tls sealedsecrets.bitnami.com/sealed-secrets-key=active
 kubectl -n sealed-secrets rollout restart deployment.apps/sealed-secrets
 
