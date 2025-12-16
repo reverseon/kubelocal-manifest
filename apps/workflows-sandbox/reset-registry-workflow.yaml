@@ -42,20 +42,39 @@ spec:
       command: [sh]
       source: |
         #!/bin/sh
+        set -x
         REPO="{{inputs.parameters.repo}}"
+        echo "Processing repository: $REPO"
 
         # Get all tags for the repository
-        TAGS=$(curl -s http://docker-registry.cluster-registry.svc.cluster.local:5000/v2/${REPO}/tags/list | grep -o '"tags":\[[^]]*\]' | grep -o '\[[^]]*\]' | sed 's/\[//;s/\]//;s/"//g' | tr ',' ' ')
+        TAGS_JSON=$(curl -s http://docker-registry.cluster-registry.svc.cluster.local:5000/v2/${REPO}/tags/list)
+        echo "Tags JSON: $TAGS_JSON"
+
+        TAGS=$(echo "$TAGS_JSON" | grep -o '"tags":\[[^]]*\]' | grep -o '\[[^]]*\]' | sed 's/\[//;s/\]//;s/"//g' | tr ',' ' ')
+        echo "Tags found: $TAGS"
 
         # Delete each tag
         for TAG in $TAGS; do
-          # Get digest
+          echo "Processing tag: $TAG"
+
+          # Get digest - try different manifest types
           DIGEST=$(curl -s -I -H "Accept: application/vnd.docker.distribution.manifest.v2+json" \
             http://docker-registry.cluster-registry.svc.cluster.local:5000/v2/${REPO}/manifests/${TAG} | \
-            grep -i Docker-Content-Digest | awk '{print $2}' | tr -d '\r')
+            grep -i docker-content-digest | awk '{print $2}' | tr -d '\r\n ')
+
+          if [ -z "$DIGEST" ]; then
+            echo "Trying OCI manifest format..."
+            DIGEST=$(curl -s -I -H "Accept: application/vnd.oci.image.manifest.v1+json" \
+              http://docker-registry.cluster-registry.svc.cluster.local:5000/v2/${REPO}/manifests/${TAG} | \
+              grep -i docker-content-digest | awk '{print $2}' | tr -d '\r\n ')
+          fi
 
           if [ -n "$DIGEST" ]; then
-            echo "Deleting ${REPO}:${TAG} (${DIGEST})"
-            curl -X DELETE http://docker-registry.cluster-registry.svc.cluster.local:5000/v2/${REPO}/manifests/${DIGEST}
+            echo "Deleting ${REPO}:${TAG} with digest: ${DIGEST}"
+            RESULT=$(curl -v -X DELETE http://docker-registry.cluster-registry.svc.cluster.local:5000/v2/${REPO}/manifests/${DIGEST} 2>&1)
+            echo "Delete result: $RESULT"
+          else
+            echo "No digest found for ${REPO}:${TAG}"
           fi
         done
+        echo "Finished processing $REPO"
