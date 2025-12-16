@@ -1,0 +1,20 @@
+server:
+  enabled: true
+  servicePort: 2746
+  ingress:
+    enabled: true
+    ingressClassName: nginx
+    annotations:
+      cert-manager.io/cluster-issuer: ishiori-local-general-issuer
+      cert-manager.io/common-name: workflows.kube.ishiori.lnet
+      nginx.ingress.kubernetes.io/backend-protocol: HTTP
+      nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    hosts:
+      - workflows.kube.ishiori.lnet
+    paths:
+      - /
+    pathType: Prefix
+    tls:
+      - hosts:
+          - workflows.kube.ishiori.lnet
+        secretName: argo-workflows-server-tls
