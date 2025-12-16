@@ -3,3 +3,26 @@ kind: Kustomization
 resources:
 - helm-argo-rollouts.yaml
 - namespace.yaml
+
+# Fix for Kubernetes 1.25+ removing preserveUnknownFields which is no longer supported. 
+patches:
+- target:
+    kind: CustomResourceDefinition
+    name: analysisruns.argoproj.io
+  path: patch-remove-preserveUnknownFields.yaml
+- target:
+    kind: CustomResourceDefinition
+    name: analysistemplates.argoproj.io
+  path: patch-remove-preserveUnknownFields.yaml
+- target:
+    kind: CustomResourceDefinition
+    name: clusteranalysistemplates.argoproj.io
+  path: patch-remove-preserveUnknownFields.yaml
+- target:
+    kind: CustomResourceDefinition
+    name: experiments.argoproj.io
+  path: patch-remove-preserveUnknownFields.yaml
+- target:
+    kind: CustomResourceDefinition
+    name: rollouts.argoproj.io
+  path: patch-remove-preserveUnknownFields.yaml
