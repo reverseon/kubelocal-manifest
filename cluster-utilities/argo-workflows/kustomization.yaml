@@ -3,4 +3,3 @@ kind: Kustomization
 resources:
 - helm-argo-workflows.yaml
 - namespace.yaml
-- rbac.yaml
