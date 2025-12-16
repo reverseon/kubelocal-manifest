@@ -2,7 +2,7 @@ apiVersion: argoproj.io/v1alpha1
 kind: WorkflowTemplate
 metadata:
   name: build-and-push-dockerfile
-  namespace: workflows-sandbox
+  namespace: cluster-registry
 spec:
   entrypoint: build-and-push
   volumes:

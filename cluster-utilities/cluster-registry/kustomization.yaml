@@ -1,5 +1,16 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
+namespace: cluster-registry
 resources:
 - namespace.yaml
 - registry.yaml
+- rbac.yaml
+- build-workflow.yaml
+- reset-registry-workflow.yaml
+
+configMapGenerator:
+- name: dockerfile
+  files:
+  - files/Dockerfile
+  options:
+    disableNameSuffixHash: true

@@ -3,13 +3,3 @@ kind: Kustomization
 namespace: workflows-sandbox
 resources:
 - namespace.yaml
-- rbac.yaml
-- build-workflow.yaml
-- reset-registry-workflow.yaml
-
-configMapGenerator:
-- name: dockerfile
-  files:
-  - files/Dockerfile
-  options:
-    disableNameSuffixHash: true

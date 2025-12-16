@@ -2,7 +2,7 @@ apiVersion: argoproj.io/v1alpha1
 kind: WorkflowTemplate
 metadata:
   name: reset-registry
-  namespace: workflows-sandbox
+  namespace: cluster-registry
 spec:
   entrypoint: reset
   templates:
