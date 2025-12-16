@@ -14,6 +14,8 @@ spec:
         - path: "cluster-utilities/sealed-secrets"
         - path: "cluster-utilities/ingress-nginx"
         - path: "cluster-utilities/k8s-dashboard"
+        - path: "cluster-utilities/argo-rollouts"
+        - path: "cluster-utilities/cluster-scoped"
         - path: "apps/sandbox"
   template:
     metadata:
