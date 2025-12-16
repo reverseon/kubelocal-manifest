@@ -1,4 +1,6 @@
 server:
+  authModes:
+    - client
   enabled: true
   servicePort: 2746
   ingress:

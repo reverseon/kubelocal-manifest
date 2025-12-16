@@ -3529,6 +3529,7 @@ spec:
           args:
           - server
           - --configmap=argo-workflows-workflow-controller-configmap
+          - "--auth-mode=client"
           - "--secure=false"
           - "--loglevel"
           - "info"
