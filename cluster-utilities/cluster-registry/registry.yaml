@@ -115,8 +115,6 @@ kind: Ingress
 metadata:
   name: docker-registry
   namespace: cluster-registry
-  annotations:
-    cert-manager.io/cluster-issuer: letsencrypt-prod
 spec:
   tls:
   - hosts:
