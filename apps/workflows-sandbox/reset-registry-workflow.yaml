@@ -17,6 +17,8 @@ spec:
           - name: repo
             value: "{{item}}"
         withParam: "{{steps.list-repos.outputs.result}}"
+    - - name: garbage-collect
+        template: garbage-collection
 
   - name: list-repositories
     script:
@@ -78,3 +80,21 @@ spec:
           fi
         done
         echo "Finished processing $REPO"
+
+  - name: garbage-collection
+    script:
+      image: registry:2
+      command: [sh]
+      source: |
+        #!/bin/sh
+        set -x
+        echo "Running garbage collection on registry..."
+        registry garbage-collect /etc/docker/registry/config.yml
+        echo "Garbage collection completed"
+      volumeMounts:
+      - name: registry-storage
+        mountPath: /var/lib/registry
+    volumes:
+    - name: registry-storage
+      persistentVolumeClaim:
+        claimName: registry-pvc
