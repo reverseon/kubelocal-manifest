@@ -91,6 +91,14 @@ spec:
         echo "Running garbage collection on registry..."
         registry garbage-collect /etc/docker/registry/config.yml
         echo "Garbage collection completed"
+
+        echo "Cleaning up empty repository directories..."
+        cd /var/lib/registry/docker/registry/v2/repositories
+        find . -type d -empty -delete
+        echo "Repository cleanup completed"
+
+        echo "Listing remaining repositories..."
+        ls -la /var/lib/registry/docker/registry/v2/repositories/ || echo "All repositories cleaned"
       volumeMounts:
       - name: registry-storage
         mountPath: /var/lib/registry
