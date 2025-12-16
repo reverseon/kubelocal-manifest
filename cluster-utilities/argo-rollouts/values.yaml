@@ -1,2 +1,21 @@
 dashboard:
   enabled: true
+  service:
+    port: 3100
+  ingress:
+    enabled: true
+    ingressClassName: nginx
+    annotations:
+      cert-manager.io/cluster-issuer: ishiori-local-general-issuer
+      cert-manager.io/common-name: rollouts.kube.ishiori.lnet
+      nginx.ingress.kubernetes.io/backend-protocol: HTTP
+      nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    hosts:
+      - rollouts.kube.ishiori.lnet
+    paths:
+      - /
+    pathType: Prefix
+    tls:
+      - hosts:
+          - rollouts.kube.ishiori.lnet
+        secretName: argo-rollouts-dashboard-tls

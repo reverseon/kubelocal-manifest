@@ -17244,4 +17244,40 @@ spec:
           {}
       securityContext:
         runAsNonRoot: true
+---
+# Source: argo-rollouts/templates/dashboard/ingress.yaml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    cert-manager.io/cluster-issuer: "ishiori-local-general-issuer"
+    cert-manager.io/common-name: "rollouts.kube.ishiori.lnet"
+    nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+  name: argo-rollouts-dashboard
+  namespace: "argo-rollouts"
+  labels:
+    helm.sh/chart: argo-rollouts-2.40.5
+    app.kubernetes.io/name: argo-rollouts
+    app.kubernetes.io/instance: argo-rollouts
+    app.kubernetes.io/version: "v1.8.3"
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/part-of: argo-rollouts
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: rollouts.kube.ishiori.lnet
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: argo-rollouts-dashboard
+                port:
+                  number: 3100
+  tls:
+    - hosts:
+      - rollouts.kube.ishiori.lnet
+      secretName: argo-rollouts-dashboard-tls
 
