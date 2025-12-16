@@ -1,10 +1,8 @@
 server:
   authModes:
-    - client
+    - server
   enabled: true
   servicePort: 2746
-  extraArgs:
-    - --x-frame-options=SAMEORIGIN
   ingress:
     enabled: true
     ingressClassName: nginx
