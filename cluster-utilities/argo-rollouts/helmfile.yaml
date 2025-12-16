@@ -7,3 +7,5 @@ releases:
   namespace: argo-rollouts
   chart: argo/argo-rollouts
   version: 2.40.5
+  values:
+    - values.yaml

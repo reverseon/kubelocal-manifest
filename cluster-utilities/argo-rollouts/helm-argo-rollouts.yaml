@@ -14,6 +14,21 @@ metadata:
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: argo-rollouts
 ---
+# Source: argo-rollouts/templates/dashboard/serviceaccount.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: argo-rollouts-dashboard
+  namespace: "argo-rollouts"
+  labels:
+    app.kubernetes.io/component: rollouts-dashboard
+    helm.sh/chart: argo-rollouts-2.40.5
+    app.kubernetes.io/name: argo-rollouts
+    app.kubernetes.io/instance: argo-rollouts
+    app.kubernetes.io/version: "v1.8.3"
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/part-of: argo-rollouts
+---
 # Source: argo-rollouts/templates/controller/configmap.yaml
 apiVersion: v1
 kind: ConfigMap
@@ -16930,6 +16945,93 @@ rules:
     - watch
     - update
 ---
+# Source: argo-rollouts/templates/dashboard/clusterrole.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: argo-rollouts-dashboard
+  labels:
+    app.kubernetes.io/component: rollouts-dashboard
+    helm.sh/chart: argo-rollouts-2.40.5
+    app.kubernetes.io/name: argo-rollouts
+    app.kubernetes.io/instance: argo-rollouts
+    app.kubernetes.io/version: "v1.8.3"
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/part-of: argo-rollouts
+rules:
+  - apiGroups:
+      - argoproj.io
+    resources:
+      - rollouts
+      - rollouts/status
+      - rollouts/finalizers
+    verbs:
+      - get
+      - list
+      - watch
+      - update
+      - patch
+  - apiGroups:
+      - argoproj.io
+    resources:
+      - analysisruns
+      - analysisruns/finalizers
+      - experiments
+      - experiments/finalizers
+    verbs:
+      - create
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - argoproj.io
+    resources:
+      - analysistemplates
+      - clusteranalysistemplates
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - apps
+    resources:
+      - deployments
+    verbs:
+      - get
+      - list
+      - watch
+      - update
+      - patch
+  - apiGroups:
+      - apps
+    resources:
+      - replicasets
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - ""
+    resources:
+      - pods
+    verbs:
+      - list
+      - watch
+  - apiGroups:
+      - ""
+    resources:
+      - configmaps
+    verbs:
+      - get
+  - apiGroups:
+      - coordination.k8s.io
+    resources:
+      - leases
+    verbs:
+      - create
+      - get
+      - update
+---
 # Source: argo-rollouts/templates/controller/clusterrolebinding.yaml
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
@@ -16951,6 +17053,55 @@ subjects:
 - kind: ServiceAccount
   name: argo-rollouts
   namespace: "argo-rollouts"
+---
+# Source: argo-rollouts/templates/dashboard/clusterrolebinding.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: argo-rollouts-dashboard
+  labels:
+    app.kubernetes.io/component: rollouts-dashboard
+    helm.sh/chart: argo-rollouts-2.40.5
+    app.kubernetes.io/name: argo-rollouts
+    app.kubernetes.io/instance: argo-rollouts
+    app.kubernetes.io/version: "v1.8.3"
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/part-of: argo-rollouts
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: argo-rollouts-dashboard
+subjects:
+- kind: ServiceAccount
+  name: argo-rollouts-dashboard
+  namespace: "argo-rollouts"
+---
+# Source: argo-rollouts/templates/dashboard/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: argo-rollouts-dashboard
+  namespace: "argo-rollouts"
+  labels:
+    app.kubernetes.io/component: rollouts-dashboard
+    helm.sh/chart: argo-rollouts-2.40.5
+    app.kubernetes.io/name: argo-rollouts
+    app.kubernetes.io/instance: argo-rollouts
+    app.kubernetes.io/version: "v1.8.3"
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/part-of: argo-rollouts
+  annotations:
+spec:
+  type: ClusterIP
+  ports:
+  - name: dashboard
+    protocol: TCP
+    port: 3100
+    targetPort: dashboard
+  selector:
+    app.kubernetes.io/component: rollouts-dashboard
+    app.kubernetes.io/name: argo-rollouts
+    app.kubernetes.io/instance: argo-rollouts
 ---
 # Source: argo-rollouts/templates/controller/deployment.yaml
 apiVersion: apps/v1
@@ -17043,4 +17194,54 @@ spec:
         emptyDir: {}
       - name: tmp
         emptyDir: {}
+---
+# Source: argo-rollouts/templates/dashboard/deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: argo-rollouts-dashboard
+  namespace: "argo-rollouts"
+  labels:
+    app.kubernetes.io/component: rollouts-dashboard
+    helm.sh/chart: argo-rollouts-2.40.5
+    app.kubernetes.io/name: argo-rollouts
+    app.kubernetes.io/instance: argo-rollouts
+    app.kubernetes.io/version: "v1.8.3"
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/part-of: argo-rollouts
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: argo-rollouts
+      app.kubernetes.io/instance: argo-rollouts
+      app.kubernetes.io/component: rollouts-dashboard
+  strategy:
+    type: Recreate
+  replicas: 1
+  revisionHistoryLimit: 10
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: argo-rollouts
+        app.kubernetes.io/instance: argo-rollouts
+        app.kubernetes.io/component: rollouts-dashboard
+    spec:
+      serviceAccountName: argo-rollouts-dashboard
+      containers:
+      - image: "quay.io/argoproj/kubectl-argo-rollouts:v1.8.3"
+        imagePullPolicy: IfNotPresent
+        args:
+        - dashboard
+        - "--loglevel=info"
+        - "--kloglevel=0"
+        name: argo-rollouts-dashboard
+        ports:
+        - containerPort: 3100
+          name: dashboard
+        securityContext:
+          {}
+        resources:
+          {}
+      securityContext:
+        runAsNonRoot: true
 
