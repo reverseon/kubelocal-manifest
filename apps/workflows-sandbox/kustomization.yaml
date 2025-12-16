@@ -3,6 +3,7 @@ kind: Kustomization
 namespace: workflows-sandbox
 resources:
 - namespace.yaml
+- rbac.yaml
 - build-workflow.yaml
 
 configMapGenerator:
