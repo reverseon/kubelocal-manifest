@@ -115,6 +115,8 @@ kind: Ingress
 metadata:
   name: docker-registry
   namespace: cluster-registry
+  annotations:
+    cert-manager.io/cluster-issuer: ishiori-local-general-issuer
 spec:
   tls:
   - hosts:
