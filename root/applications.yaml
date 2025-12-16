@@ -17,7 +17,7 @@ spec:
         - path: "cluster-utilities/argo-rollouts"
         - path: "cluster-utilities/cluster-scoped"
         - path: "cluster-utilities/cluster-registry"
-        - path: "apps/sandbox"
+        - path: "apps/workflows-sandbox"
   template:
     metadata:
       name: '{{path.basename}}'
