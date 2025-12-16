@@ -9,3 +9,5 @@ configMapGenerator:
 - name: dockerfile
   files:
   - files/Dockerfile
+  options:
+    disableNameSuffixHash: true
