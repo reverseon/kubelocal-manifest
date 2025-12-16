@@ -92,9 +92,17 @@ spec:
         registry garbage-collect /etc/docker/registry/config.yml
         echo "Garbage collection completed"
 
-        echo "Cleaning up empty repository directories..."
+        echo "Cleaning up repository directories..."
         cd /var/lib/registry/docker/registry/v2/repositories
-        find . -type d -empty -delete
+
+        # Remove all repository directories (they should be empty after GC)
+        for repo in */; do
+          if [ -d "$repo" ]; then
+            echo "Removing repository directory: $repo"
+            rm -rf "$repo"
+          fi
+        done
+
         echo "Repository cleanup completed"
 
         echo "Listing remaining repositories..."
