@@ -38,10 +38,12 @@ spec:
         env:
         - name: REGISTRY_STORAGE_FILESYSTEM_ROOTDIRECTORY
           value: /var/lib/registry
+        - name: REGISTRY_STORAGE_DELETE_ENABLED
+          value: "true"
         - name: REGISTRY_HTTP_HEADERS_Access-Control-Allow-Origin
           value: '["*"]'
         - name: REGISTRY_HTTP_HEADERS_Access-Control-Allow-Methods
-          value: '["HEAD", "GET", "OPTIONS"]'
+          value: '["HEAD", "GET", "OPTIONS", "DELETE"]'
         - name: REGISTRY_HTTP_HEADERS_Access-Control-Allow-Headers
           value: '["Authorization", "Accept", "Content-Type"]'
       volumes:
