@@ -16,6 +16,7 @@ spec:
         - path: "cluster-utilities/k8s-dashboard"
         - path: "cluster-utilities/argo-rollouts"
         - path: "cluster-utilities/cluster-scoped"
+        - path: "cluster-utilities/cluster-registry"
         - path: "apps/sandbox"
   template:
     metadata:
