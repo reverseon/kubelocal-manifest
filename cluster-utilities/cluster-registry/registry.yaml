@@ -86,8 +86,6 @@ spec:
         env:
         - name: REGISTRY_TITLE
           value: Kubelocal Docker Registry
-        - name: REGISTRY_URL
-          value: http://docker-registry:5000
         - name: DELETE_IMAGES
           value: "false"
         - name: SHOW_CONTENT_DIGEST
