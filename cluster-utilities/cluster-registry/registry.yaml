@@ -118,6 +118,7 @@ metadata:
   annotations:
     cert-manager.io/cluster-issuer: ishiori-local-general-issuer
 spec:
+  ingressClassName: nginx
   tls:
   - hosts:
     - registry.kube.ishiori.lnet
