@@ -5,6 +5,7 @@ resources:
 - namespace.yaml
 - rbac.yaml
 - build-workflow.yaml
+- reset-registry-workflow.yaml
 
 configMapGenerator:
 - name: dockerfile

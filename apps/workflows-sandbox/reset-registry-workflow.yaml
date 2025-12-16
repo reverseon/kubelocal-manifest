@@ -1,0 +1,61 @@
+apiVersion: argoproj.io/v1alpha1
+kind: WorkflowTemplate
+metadata:
+  name: reset-registry
+  namespace: workflows-sandbox
+spec:
+  entrypoint: reset
+  templates:
+  - name: reset
+    steps:
+    - - name: list-repos
+        template: list-repositories
+    - - name: delete-repos
+        template: delete-repository
+        arguments:
+          parameters:
+          - name: repo
+            value: "{{item}}"
+        withParam: "{{steps.list-repos.outputs.result}}"
+
+  - name: list-repositories
+    script:
+      image: curlimages/curl:latest
+      command: [sh]
+      source: |
+        #!/bin/sh
+        curl -s http://docker-registry.cluster-registry.svc.cluster.local:5000/v2/_catalog | \
+        grep -o '"repositories":\[[^]]*\]' | \
+        grep -o '\[[^]]*\]' | \
+        sed 's/\[//;s/\]//;s/"//g' | \
+        tr ',' '\n' | \
+        awk '{print "[\"" $0 "\"]"}' | \
+        paste -sd ',' | \
+        sed 's/^/[/;s/$/]/'
+
+  - name: delete-repository
+    inputs:
+      parameters:
+      - name: repo
+    script:
+      image: curlimages/curl:latest
+      command: [sh]
+      source: |
+        #!/bin/sh
+        REPO="{{inputs.parameters.repo}}"
+
+        # Get all tags for the repository
+        TAGS=$(curl -s http://docker-registry.cluster-registry.svc.cluster.local:5000/v2/${REPO}/tags/list | grep -o '"tags":\[[^]]*\]' | grep -o '\[[^]]*\]' | sed 's/\[//;s/\]//;s/"//g' | tr ',' ' ')
+
+        # Delete each tag
+        for TAG in $TAGS; do
+          # Get digest
+          DIGEST=$(curl -s -I -H "Accept: application/vnd.docker.distribution.manifest.v2+json" \
+            http://docker-registry.cluster-registry.svc.cluster.local:5000/v2/${REPO}/manifests/${TAG} | \
+            grep -i Docker-Content-Digest | awk '{print $2}' | tr -d '\r')
+
+          if [ -n "$DIGEST" ]; then
+            echo "Deleting ${REPO}:${TAG} (${DIGEST})"
+            curl -X DELETE http://docker-registry.cluster-registry.svc.cluster.local:5000/v2/${REPO}/manifests/${DIGEST}
+          fi
+        done
