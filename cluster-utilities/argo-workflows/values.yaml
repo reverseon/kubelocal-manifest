@@ -3,6 +3,8 @@ server:
     - client
   enabled: true
   servicePort: 2746
+  extraArgs:
+    - --x-frame-options=SAMEORIGIN
   ingress:
     enabled: true
     ingressClassName: nginx
@@ -11,6 +13,10 @@ server:
       cert-manager.io/common-name: workflows.kube.ishiori.lnet
       nginx.ingress.kubernetes.io/backend-protocol: HTTP
       nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+      nginx.ingress.kubernetes.io/configuration-snippet: |
+        proxy_set_header X-Original-URL $scheme://$http_host$request_uri;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
     hosts:
       - workflows.kube.ishiori.lnet
     paths:

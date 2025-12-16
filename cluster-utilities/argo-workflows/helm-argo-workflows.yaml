@@ -3529,6 +3529,7 @@ spec:
           args:
           - server
           - --configmap=argo-workflows-workflow-controller-configmap
+          - --x-frame-options=SAMEORIGIN
           - "--auth-mode=client"
           - "--secure=false"
           - "--loglevel"
@@ -3577,6 +3578,7 @@ metadata:
     cert-manager.io/cluster-issuer: "ishiori-local-general-issuer"
     cert-manager.io/common-name: "workflows.kube.ishiori.lnet"
     nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
+    nginx.ingress.kubernetes.io/configuration-snippet: "proxy_set_header X-Original-URL $scheme://$http_host$request_uri;\nproxy_set_header X-Forwarded-Proto $scheme;\nproxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;\n"
     nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
   name: argo-workflows-server
   namespace: "argo-workflows"
