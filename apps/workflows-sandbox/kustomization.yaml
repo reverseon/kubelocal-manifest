@@ -3,3 +3,8 @@ kind: Kustomization
 namespace: workflows-sandbox
 resources:
 - namespace.yaml
+
+configMapGenerator:
+- name: dockerfile
+  files:
+  - files/Dockerfile
