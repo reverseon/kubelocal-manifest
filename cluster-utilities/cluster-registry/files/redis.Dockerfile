@@ -26,7 +26,7 @@ RUN mkdir -p /etc/redis && \
     chown -R chloe:users /etc/redis
 
 # Copy redis.conf into the image
-COPY redis.conf /etc/redis/redis.conf
+COPY redis.conf /tmp/redis-base.conf
 
 USER chloe
 WORKDIR /etc/redis
