@@ -12,19 +12,16 @@ data:
     # Get password from secret
     REDIS_PASSWORD=$(cat /etc/redis-password/password)
     
-    # Check if redis.conf already exists (pod restart)
-    if [ ! -f /etc/redis/redis.conf ]; then
-      # First time initialization - copy base config from /tmp
-      cp /tmp/redis-base.conf /etc/redis/redis.conf
-      
-      # Add authentication
-      echo "requirepass $REDIS_PASSWORD" >> /etc/redis/redis.conf
-      echo "masterauth $REDIS_PASSWORD" >> /etc/redis/redis.conf
-      
-      # Determine if this is the master (first pod)
-      if [[ "$HOSTNAME" != "redis-sentinel-0" ]]; then
-        echo "replicaof redis-sentinel-0.redis-sentinel-headless.sidekiq-sandbox.svc.cluster.local 6379" >> /etc/redis/redis.conf
-      fi
+    # Always initialize redis.conf fresh from base
+    cp /tmp/redis-base.conf /etc/redis/redis.conf
+    
+    # Add authentication
+    echo "requirepass $REDIS_PASSWORD" >> /etc/redis/redis.conf
+    echo "masterauth $REDIS_PASSWORD" >> /etc/redis/redis.conf
+    
+    # Determine if this is the master (first pod)
+    if [[ "$HOSTNAME" != "redis-sentinel-0" ]]; then
+      echo "replicaof redis-sentinel-0.redis-sentinel-headless.sidekiq-sandbox.svc.cluster.local 6379" >> /etc/redis/redis.conf
     fi
     
     # Create/update Sentinel configuration
@@ -95,7 +92,10 @@ spec:
       initContainers:
       - name: init-redis
         image: localhost:30500/custom-redis:latest
-        command: ['/bin/bash', '-c', 'cp /etc/redis/redis.conf /tmp/redis-base.conf && /scripts/init.sh']
+        command:
+        - /bin/bash
+        - -c
+        - /scripts/init.sh
         volumeMounts:
         - name: data
           mountPath: /etc/redis
