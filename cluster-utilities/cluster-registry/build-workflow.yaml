@@ -8,17 +8,12 @@ spec:
   volumes:
   - name: redis-dockerfile
     configMap:
-      name: redis-dockerfile
-  - name: sentinel-dockerfile
-    configMap:
-      name: sentinel-dockerfile
+      name: static-files
   templates:
   - name: build-all
     steps:
     - - name: build-redis
         template: build-redis-image
-      - name: build-sentinel
-        template: build-sentinel-image
   
   - name: build-redis-image
     container:
