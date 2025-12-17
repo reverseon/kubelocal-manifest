@@ -1,0 +1,66 @@
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: configure-insecure-registry
+  namespace: cluster-registry
+spec:
+  selector:
+    matchLabels:
+      app: configure-insecure-registry
+  template:
+    metadata:
+      labels:
+        app: configure-insecure-registry
+    spec:
+      hostNetwork: true
+      hostPID: true
+      initContainers:
+      - name: configure-containerd
+        image: alpine:3.18
+        command:
+        - /bin/sh
+        - -c
+        - |
+          set -e
+          echo "Configuring containerd for insecure registry..."
+          
+          # Create the registry config directory
+          mkdir -p /host/etc/containerd/certs.d/docker-registry.cluster-registry.svc.cluster.local:5000
+          
+          # Create hosts.toml for insecure registry
+          cat > /host/etc/containerd/certs.d/docker-registry.cluster-registry.svc.cluster.local:5000/hosts.toml <<EOF
+          server = "http://docker-registry.cluster-registry.svc.cluster.local:5000"
+          
+          [host."http://docker-registry.cluster-registry.svc.cluster.local:5000"]
+            capabilities = ["pull", "resolve", "push"]
+            skip_verify = true
+          EOF
+          
+          echo "Configuration written. Restarting containerd..."
+          nsenter -t 1 -m -u -i -n -- systemctl restart containerd || echo "Could not restart containerd (may not be needed)"
+          
+          echo "Configuration complete!"
+        securityContext:
+          privileged: true
+        volumeMounts:
+        - name: host-etc
+          mountPath: /host/etc
+      containers:
+      - name: sleep
+        image: alpine:3.18
+        command: ["sleep", "infinity"]
+        resources:
+          requests:
+            cpu: 1m
+            memory: 8Mi
+          limits:
+            cpu: 10m
+            memory: 16Mi
+      volumes:
+      - name: host-etc
+        hostPath:
+          path: /etc
+          type: Directory
+      tolerations:
+      - operator: Exists
