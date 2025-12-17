@@ -9,8 +9,8 @@ resources:
 - reset-registry-workflow.yaml
 
 configMapGenerator:
-- name: dockerfile
+- name: static-files
   files:
-  - files/Dockerfile
+  - files/*
   options:
     disableNameSuffixHash: true

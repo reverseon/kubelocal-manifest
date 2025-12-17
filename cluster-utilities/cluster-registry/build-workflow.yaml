@@ -4,13 +4,23 @@ metadata:
   name: build-and-push-dockerfile
   namespace: cluster-registry
 spec:
-  entrypoint: build-and-push
+  entrypoint: build-all
   volumes:
-  - name: dockerfile-volume
+  - name: redis-dockerfile
     configMap:
-      name: dockerfile
+      name: redis-dockerfile
+  - name: sentinel-dockerfile
+    configMap:
+      name: sentinel-dockerfile
   templates:
-  - name: build-and-push
+  - name: build-all
+    steps:
+    - - name: build-redis
+        template: build-redis-image
+      - name: build-sentinel
+        template: build-sentinel-image
+  
+  - name: build-redis-image
     container:
       image: moby/buildkit:latest
       command:
@@ -20,9 +30,9 @@ spec:
       - --frontend=dockerfile.v0
       - --local=context=/workspace
       - --local=dockerfile=/workspace
-      - --output=type=image,name=docker-registry.cluster-registry.svc.cluster.local:5000/hello-chloe:latest,push=true,registry.insecure=true
+      - --output=type=image,name=docker-registry.cluster-registry.svc.cluster.local:5000/custom-redis:latest,push=true,registry.insecure=true
       volumeMounts:
-      - name: dockerfile-volume
+      - name: redis-dockerfile
         mountPath: /workspace
         readOnly: true
       securityContext:
