@@ -11,6 +11,8 @@ resources:
 configMapGenerator:
 - name: static-files
   files:
-  - files/*
+  - files/redis-log.sh
+  - files/redis.conf
+  - files/redis.Dockerfile
   options:
     disableNameSuffixHash: true
