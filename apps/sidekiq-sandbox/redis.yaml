@@ -94,7 +94,7 @@ spec:
     spec:
       initContainers:
       - name: init-redis
-        image: docker-registry.cluster-registry.svc.cluster.local:5000/custom-redis:latest
+        image: localhost:30500/custom-redis:latest
         command: ['/bin/bash', '-c', 'cp /etc/redis/redis.conf /tmp/redis-base.conf && /scripts/init.sh']
         volumeMounts:
         - name: data
@@ -106,7 +106,7 @@ spec:
           readOnly: true
       containers:
       - name: redis
-        image: docker-registry.cluster-registry.svc.cluster.local:5000/custom-redis:latest
+        image: localhost:30500/custom-redis:latest
         command:
         - redis-server
         - /etc/redis/redis.conf
@@ -136,7 +136,7 @@ spec:
           initialDelaySeconds: 5
           periodSeconds: 5
       - name: sentinel
-        image: docker-registry.cluster-registry.svc.cluster.local:5000/custom-redis:latest
+        image: localhost:30500/custom-redis:latest
         command:
         - redis-sentinel
         - /etc/redis/sentinel.conf

@@ -64,6 +64,21 @@ spec:
     targetPort: 5000
     protocol: TCP
 ---
+apiVersion: v1
+kind: Service
+metadata:
+  name: docker-registry-external
+  namespace: cluster-registry
+spec:
+  type: NodePort
+  selector:
+    app: docker-registry
+  ports:
+  - port: 5000
+    targetPort: 5000
+    nodePort: 30500
+    protocol: TCP
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:

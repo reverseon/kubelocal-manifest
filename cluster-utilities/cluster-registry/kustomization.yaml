@@ -7,7 +7,6 @@ resources:
 - rbac.yaml
 - build-workflow.yaml
 - reset-registry-workflow.yaml
-- configure-insecure-registry.yaml
 
 configMapGenerator:
 - name: static-files
