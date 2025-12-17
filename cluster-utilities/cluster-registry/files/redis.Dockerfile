@@ -25,6 +25,9 @@ RUN mkdir -p /etc/redis && \
     useradd -r -u 1000 -g users chloe && \
     chown -R chloe:users /etc/redis
 
+# Copy redis.conf into the image
+COPY redis.conf /etc/redis/redis.conf
+
 USER chloe
 WORKDIR /etc/redis
 EXPOSE 6379
