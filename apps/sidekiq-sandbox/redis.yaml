@@ -79,6 +79,8 @@ kind: StatefulSet
 metadata:
   name: redis-sentinel
   namespace: sidekiq-sandbox
+  annotations:
+    argocd.argoproj.io/sync-options: Replace=true
 spec:
   serviceName: redis-sentinel-headless
   replicas: 3
