@@ -29,7 +29,7 @@ data:
     bind 0.0.0.0
     port 26379
     dir /etc/redis
-    sentinel monitor mymaster redis-sentinel-0.redis-sentinel-headless.sidekiq-sandbox.svc.cluster.local 6379 2
+    sentinel monitor mymaster 127.0.0.1 6379 2
     sentinel auth-pass mymaster $REDIS_PASSWORD
     sentinel down-after-milliseconds mymaster 5000
     sentinel parallel-syncs mymaster 1
