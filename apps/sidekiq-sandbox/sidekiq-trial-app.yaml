@@ -24,6 +24,11 @@ spec:
         env:
         - name: RAILS_ENV
           value: production
+        - name: SECRET_KEY_BASE
+          valueFrom:
+            secretKeyRef:
+              name: sidekiq-secret
+              key: SECRET_KEY_BASE
         readinessProbe:
           httpGet:
             path: /
