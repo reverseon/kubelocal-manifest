@@ -15,6 +15,7 @@ spec:
       labels:
         app: opebox
     spec:
+      hostNetwork: true
       containers:
       - name: netshoot
         image: nicolaka/netshoot:latest
