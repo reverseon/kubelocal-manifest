@@ -1,3 +1,15 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: opebox-root-pvc
+  namespace: operations
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -30,7 +42,12 @@ spec:
         volumeMounts:
         - name: ephemeral-storage
           mountPath: /tmp
+        - name: opebox-root
+          mountPath: /root
       volumes:
       - name: ephemeral-storage
         emptyDir: {}
+      - name: opebox-root
+        persistentVolumeClaim:
+          claimName: opebox-root-pvc
       restartPolicy: Always
