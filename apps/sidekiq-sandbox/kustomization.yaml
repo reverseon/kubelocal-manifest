@@ -5,3 +5,4 @@ resources:
 - namespace.yaml
 - redis.yaml
 - secret.yaml
+- sidekiq-trial-app.yaml
