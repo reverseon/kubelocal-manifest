@@ -224,9 +224,7 @@ spec:
           name: http
           protocol: TCP
         env:
-        - name: RITRUSTEDORIGINS
-          value: "http://localhost:8124"
-        - name: RIPORT
+        - name: RI_APP_PORT
           value: "8124"
         volumeMounts:
         - name: redisinsight-data
