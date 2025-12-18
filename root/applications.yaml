@@ -19,6 +19,7 @@ spec:
         - path: "cluster-utilities/cluster-registry"
         - path: "apps/workflows-sandbox"
         - path: "apps/sidekiq-sandbox"
+        - path: "apps/operations"
   template:
     metadata:
       name: '{{path.basename}}'

@@ -1,0 +1,35 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: opebox
+  namespace: operations
+  labels:
+    app: opebox
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: opebox
+  template:
+    metadata:
+      labels:
+        app: opebox
+    spec:
+      containers:
+      - name: netshoot
+        image: nicolaka/netshoot:latest
+        command: ["sleep", "infinity"]
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "200m"
+        volumeMounts:
+        - name: ephemeral-storage
+          mountPath: /tmp
+      volumes:
+      - name: ephemeral-storage
+        emptyDir: {}
+      restartPolicy: Always
