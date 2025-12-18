@@ -5,6 +5,7 @@ metadata:
   namespace: shared-app
 data:
   redis.conf: |
+    port 8122
     save ""
     appendonly no
     maxmemory-policy allkeys-lru
