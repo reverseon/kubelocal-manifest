@@ -63,18 +63,25 @@ kind: Rollout
 metadata:
   name: nginx
 spec:
-  replicas: 5
+  replicas: 4
+  workloadRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: nginx
+    scaleDown: onsuccess
   strategy:
     canary:
-      steps:
-      - setWeight: 20
-      - pause: {}
-      - setWeight: 40
-      - pause: {}
-      - setWeight: 60
-      - pause: {}
-      - setWeight: 80
-      - pause: {}
+      blueGreen:
+        activeService: nginx
+        previewService: nginx-preview
+        autoPromotionEnabled: true
+        scaleDownDelaySeconds: 30
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx
+spec:
   selector:
     matchLabels:
       app: nginx
@@ -124,6 +131,19 @@ spec:
     protocol: TCP
     name: http
 ---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx-preview
+spec:
+  selector:
+    app: nginx
+  ports:
+  - port: 80
+    targetPort: 80
+    protocol: TCP
+    name: http
+---
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
@@ -145,5 +165,29 @@ spec:
         backend:
           service:
             name: nginx
+            port:
+              number: 80
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: nginx-preview
+  annotations:
+    cert-manager.io/cluster-issuer: ishiori-local-general-issuer
+spec:
+  ingressClassName: nginx
+  tls:
+  - hosts:
+    - rollouts-nginx-preview.kube.ishiori.lnet
+    secretName: rollouts-nginx-preview-tls
+  rules:
+  - host: rollouts-nginx-preview.kube.ishiori.lnet
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: nginx-preview
             port:
               number: 80
