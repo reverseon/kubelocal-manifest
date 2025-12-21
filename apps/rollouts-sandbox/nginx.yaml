@@ -70,12 +70,11 @@ spec:
     name: nginx
     scaleDown: onsuccess
   strategy:
-    canary:
-      blueGreen:
-        activeService: nginx
-        previewService: nginx-preview
-        autoPromotionEnabled: true
-        scaleDownDelaySeconds: 30
+    blueGreen:
+      activeService: nginx
+      previewService: nginx-preview
+      autoPromotionEnabled: true
+      scaleDownDelaySeconds: 30
 ---
 apiVersion: apps/v1
 kind: Deployment
