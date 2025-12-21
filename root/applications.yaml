@@ -18,9 +18,10 @@ spec:
         - path: "cluster-utilities/cluster-scoped"
         - path: "cluster-utilities/cluster-registry"
         - path: "cluster-utilities/shared-app"
+        - path: "apps/operations"
         - path: "apps/workflows-sandbox"
         - path: "apps/sidekiq-sandbox"
-        - path: "apps/operations"
+        - path: "apps/rollouts-sandbox"
   template:
     metadata:
       name: '{{path.basename}}'
