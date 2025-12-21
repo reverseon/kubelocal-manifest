@@ -68,13 +68,13 @@ spec:
     canary:
       steps:
       - setWeight: 20
-      - pause: {duration: 30s}
+      - pause: {}
       - setWeight: 40
-      - pause: {duration: 30s}
+      - pause: {}
       - setWeight: 60
-      - pause: {duration: 30s}
+      - pause: {}
       - setWeight: 80
-      - pause: {duration: 30s}
+      - pause: {}
   selector:
     matchLabels:
       app: nginx
@@ -85,7 +85,7 @@ spec:
     spec:
       containers:
       - name: nginx
-        image: nginx:1.26.2
+        image: nginx:1.27
         ports:
         - containerPort: 80
           name: http
