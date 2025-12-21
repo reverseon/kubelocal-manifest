@@ -73,7 +73,7 @@ spec:
     blueGreen:
       activeService: nginx
       previewService: nginx-preview
-      autoPromotionEnabled: true
+      autoPromotionEnabled: false
       scaleDownDelaySeconds: 30
 ---
 apiVersion: apps/v1
