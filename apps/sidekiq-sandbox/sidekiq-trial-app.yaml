@@ -31,21 +31,18 @@ spec:
               key: SECRET_KEY_BASE
         - name: USE_ELASTICACHE
           value: "false"
+        - name: USE_SENTINEL
+          value: "true"
         - name: ELASTICACHE_HOST
           value: ""
         - name: ELASTICACHE_PORT
           value: ""
         - name: ELASTICACHE_PASSWORD
           value: ""
-        - name: REDIS_HOST
+        - name: REDIS_SENTINEL_HOST
           value: redis-sentinel.sidekiq-sandbox.svc.cluster.local
-        - name: REDIS_PORT
-          value: "6379"
-        - name: REDIS_PASSWORD
-          valueFrom:
-            secretKeyRef:
-              name: redis-password
-              key: password
+        - name: REDIS_SENTINEL_PORT
+          value: "26379"
         - name: OUTPUT_CACHE_REDIS_HOST
           value: redis.shared-app.svc.cluster.local
         - name: OUTPUT_CACHE_REDIS_PORT
