@@ -107,3 +107,64 @@ spec:
             name: sidekiq-trial-app
             port:
               number: 80
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sidekiq-worker
+  namespace: sidekiq-sandbox
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: sidekiq-worker
+  template:
+    metadata:
+      labels:
+        app: sidekiq-worker
+    spec:
+      containers:
+      - name: sidekiq
+        image: localhost:30500/sidekiq-trial-app:latest
+        imagePullPolicy: Always
+        command: ["bundle", "exec", "sidekiq"]
+        env:
+        - name: RAILS_ENV
+          value: production
+        - name: SECRET_KEY_BASE
+          valueFrom:
+            secretKeyRef:
+              name: sidekiq-secret
+              key: SECRET_KEY_BASE
+        - name: USE_ELASTICACHE
+          value: "false"
+        - name: USE_SENTINEL
+          value: "true"
+        - name: ELASTICACHE_HOST
+          value: ""
+        - name: ELASTICACHE_PORT
+          value: ""
+        - name: ELASTICACHE_PASSWORD
+          value: ""
+        - name: REDIS_SENTINEL_HOST
+          value: redis-sentinel.sidekiq-sandbox.svc.cluster.local
+        - name: REDIS_SENTINEL_PORT
+          value: "26379"
+        - name: REDIS_SENTINEL_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: redis-password
+              key: password
+        - name: OUTPUT_CACHE_REDIS_HOST
+          value: redis.shared-app.svc.cluster.local
+        - name: OUTPUT_CACHE_REDIS_PORT
+          value: "6379"
+        - name: REDIS_URL
+          value: redis://mymaster:6379
+        resources:
+          requests:
+            cpu: 100m
+            memory: 256Mi
+          limits:
+            cpu: 500m
+            memory: 512Mi
