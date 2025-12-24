@@ -43,6 +43,11 @@ spec:
           value: redis-sentinel.sidekiq-sandbox.svc.cluster.local
         - name: REDIS_SENTINEL_PORT
           value: "26379"
+        - name: REDIS_SENTINEL_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: redis-password
+              key: password
         - name: OUTPUT_CACHE_REDIS_HOST
           value: redis.shared-app.svc.cluster.local
         - name: OUTPUT_CACHE_REDIS_PORT
