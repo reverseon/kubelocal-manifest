@@ -52,6 +52,8 @@ spec:
           value: redis.shared-app.svc.cluster.local
         - name: OUTPUT_CACHE_REDIS_PORT
           value: "6379"
+        - name: REDIS_URL
+          value: redis://mymaster:6379
         readinessProbe:
           httpGet:
             path: /
