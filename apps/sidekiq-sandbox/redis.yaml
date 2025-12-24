@@ -35,7 +35,7 @@ data:
     sentinel parallel-syncs mymaster 1
     sentinel failover-timeout mymaster 10000
     sentinel announce-ip ${POD_IP}
-    sentinel announce-port 6379
+    sentinel announce-port 26379
     EOF
     
     echo "Configuration initialized"
