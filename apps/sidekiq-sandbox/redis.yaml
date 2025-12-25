@@ -5,63 +5,84 @@ metadata:
   name: redis-scripts
   namespace: sidekiq-sandbox
 data:
-  init.sh: |
+  redis-init.sh: |
     #!/bin/bash
     set -e
-    INIT_MARKER=/etc/redis/.init-done
+    INIT_MARKER=/etc/redis/.init-redis-done
     if [ -f "$INIT_MARKER" ]; then
-      echo "Configuration already initialized"
+      echo "Redis configuration already initialized"
       exit 0
     fi
-    
-    # Get password from secret
+
     REDIS_PASSWORD=$(cat /etc/redis-password/password)
-    
-    # Always initialize redis.conf fresh from base
     cp /tmp/redis-base.conf /etc/redis/redis.conf
-    
-    # Add authentication
     echo "requirepass $REDIS_PASSWORD" >> /etc/redis/redis.conf
     echo "masterauth $REDIS_PASSWORD" >> /etc/redis/redis.conf
-    
-    # Determine if this is the master (first pod)
-    if [[ "$HOSTNAME" != "redis-sentinel-0" ]]; then
-      echo "replicaof redis-sentinel-0.redis-sentinel-headless.sidekiq-sandbox.svc.cluster.local 6379" >> /etc/redis/redis.conf
+
+    if [[ "$HOSTNAME" =~ -([0-9]+)$ ]]; then
+      ORDINAL=${BASH_REMATCH[1]}
+    else
+      ORDINAL=0
     fi
-    
-    # Create/update Sentinel configuration using pod IP
+    if [[ "$ORDINAL" != "0" ]]; then
+      echo "replicaof redis-0.redis-headless.sidekiq-sandbox.svc.cluster.local 6379" >> /etc/redis/redis.conf
+    fi
+
+    echo "Redis configuration initialized"
+    touch "$INIT_MARKER"
+  sentinel-init.sh: |
+    #!/bin/bash
+    set -e
+    INIT_MARKER=/etc/redis/.init-sentinel-done
+    if [ -f "$INIT_MARKER" ]; then
+      echo "Sentinel configuration already initialized"
+      exit 0
+    fi
+
+    REDIS_PASSWORD=$(cat /etc/redis-password/password)
     cat > /etc/redis/sentinel.conf <<EOF
     bind 0.0.0.0
     port 26379
     dir /etc/redis
-    sentinel monitor mymaster redis-sentinel-0.redis-sentinel-headless.sidekiq-sandbox.svc.cluster.local 6379 2
+    sentinel monitor mymaster redis-0.redis-headless.sidekiq-sandbox.svc.cluster.local 6379 2
     sentinel auth-pass mymaster $REDIS_PASSWORD
     sentinel down-after-milliseconds mymaster 5000
     sentinel parallel-syncs mymaster 1
     sentinel failover-timeout mymaster 10000
     sentinel announce-ip ${POD_IP}
     sentinel announce-port 26379
+    sentinel resolve-hostnames yes
     EOF
-    
-    echo "Configuration initialized"
+
+    echo "Sentinel configuration initialized"
     touch "$INIT_MARKER"
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: redis-sentinel-headless
+  name: redis-headless
   namespace: sidekiq-sandbox
 spec:
   clusterIP: None
   selector:
-    app: redis-sentinel
+    app: redis
   ports:
   - name: redis
     port: 6379
     targetPort: 6379
-  - name: sentinel
-    port: 26379
-    targetPort: 26379
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis
+  namespace: sidekiq-sandbox
+spec:
+  selector:
+    app: redis
+  ports:
+  - name: redis
+    port: 6379
+    targetPort: 6379
 ---
 apiVersion: v1
 kind: Service
@@ -72,9 +93,6 @@ spec:
   selector:
     app: redis-sentinel
   ports:
-  - name: redis
-    port: 6379
-    targetPort: 6379
   - name: sentinel
     port: 26379
     targetPort: 26379
@@ -82,33 +100,25 @@ spec:
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
-  name: redis-sentinel
+  name: redis
   namespace: sidekiq-sandbox
   annotations:
     argocd.argoproj.io/sync-options: Replace=true
 spec:
-  serviceName: redis-sentinel-headless
+  serviceName: redis-headless
   replicas: 3
   selector:
     matchLabels:
-      app: redis-sentinel
+      app: redis
   template:
     metadata:
       labels:
-        app: redis-sentinel
+        app: redis
     spec:
       containers:
       - name: redis
         image: localhost:30500/custom-redis:latest
-        command:
-        - /bin/bash
-        - -c
-        - /scripts/init.sh && exec redis-server /etc/redis/redis.conf
-        env:
-        - name: POD_IP
-          valueFrom:
-            fieldRef:
-              fieldPath: status.podIP
+        command: ["/bin/bash", "-c", "/scripts/redis-init.sh && exec redis-server /etc/redis/redis.conf"]
         volumeMounts:
         - name: data
           mountPath: /etc/redis
@@ -119,55 +129,12 @@ spec:
           readOnly: true
         livenessProbe:
           exec:
-            command:
-            - sh
-            - -c
-            - redis-cli -a $(cat /etc/redis-password/password) ping
+            command: ["sh", "-c", "redis-cli -a $(cat /etc/redis-password/password) ping"]
           initialDelaySeconds: 30
           periodSeconds: 10
         readinessProbe:
           exec:
-            command:
-            - sh
-            - -c
-            - redis-cli -a $(cat /etc/redis-password/password) ping
-          initialDelaySeconds: 5
-          periodSeconds: 5
-      - name: sentinel
-        image: localhost:30500/custom-redis:latest
-        command:
-        - /bin/bash
-        - -c
-        - /scripts/init.sh && exec redis-sentinel /etc/redis/sentinel.conf
-        env:
-        - name: POD_IP
-          valueFrom:
-            fieldRef:
-              fieldPath: status.podIP
-        volumeMounts:
-        - name: data
-          mountPath: /etc/redis
-        - name: scripts
-          mountPath: /scripts
-        - name: redis-password
-          mountPath: /etc/redis-password
-          readOnly: true
-        livenessProbe:
-          exec:
-            command:
-            - redis-cli
-            - -p
-            - "26379"
-            - ping
-          initialDelaySeconds: 30
-          periodSeconds: 10
-        readinessProbe:
-          exec:
-            command:
-            - redis-cli
-            - -p
-            - "26379"
-            - ping
+            command: ["sh", "-c", "redis-cli -a $(cat /etc/redis-password/password) ping"]
           initialDelaySeconds: 5
           periodSeconds: 5
       volumes:
@@ -186,6 +153,62 @@ spec:
       resources:
         requests:
           storage: 1Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis-sentinel
+  namespace: sidekiq-sandbox
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: redis-sentinel
+  template:
+    metadata:
+      labels:
+        app: redis-sentinel
+    spec:
+      containers:
+      - name: sentinel
+        image: localhost:30500/custom-redis:latest
+        command: ["/bin/bash", "-c", "/scripts/sentinel-init.sh && exec redis-sentinel /etc/redis/sentinel.conf"]
+        env:
+        - name: POD_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        volumeMounts:
+        - name: data
+          mountPath: /etc/redis
+        - name: scripts
+          mountPath: /scripts
+        - name: redis-password
+          mountPath: /etc/redis-password
+          readOnly: true
+        ports:
+        - containerPort: 26379
+          name: sentinel
+        livenessProbe:
+          exec:
+            command: ["redis-cli", "-p", "26379", "ping"]
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          exec:
+            command: ["redis-cli", "-p", "26379", "ping"]
+          initialDelaySeconds: 5
+          periodSeconds: 5
+      volumes:
+      - name: data
+        emptyDir: {}
+      - name: scripts
+        configMap:
+          name: redis-scripts
+          defaultMode: 0755
+      - name: redis-password
+        secret:
+          secretName: redis-password
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
