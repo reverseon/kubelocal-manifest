@@ -8,16 +8,22 @@ data:
   redis-init.sh: |
     #!/bin/bash
     set -e
-    INIT_MARKER=/etc/redis/.init-redis-done
+    INIT_MARKER=/data/.init-redis-done
     if [ -f "$INIT_MARKER" ]; then
       echo "Redis configuration already initialized"
       exit 0
     fi
 
     REDIS_PASSWORD=$(cat /etc/redis-password/password)
-    cp /tmp/redis-base.conf /etc/redis/redis.conf
-    echo "requirepass $REDIS_PASSWORD" >> /etc/redis/redis.conf
-    echo "masterauth $REDIS_PASSWORD" >> /etc/redis/redis.conf
+    cat > /data/redis.conf <<EOF
+    bind 0.0.0.0
+    port 6379
+    dir /data
+    requirepass $REDIS_PASSWORD
+    masterauth $REDIS_PASSWORD
+    appendonly yes
+    appendfilename "appendonly.aof"
+    EOF
 
     if [[ "$HOSTNAME" =~ -([0-9]+)$ ]]; then
       ORDINAL=${BASH_REMATCH[1]}
@@ -25,7 +31,7 @@ data:
       ORDINAL=0
     fi
     if [[ "$ORDINAL" != "0" ]]; then
-      echo "replicaof redis-0.redis-headless.sidekiq-sandbox.svc.cluster.local 6379" >> /etc/redis/redis.conf
+      echo "replicaof redis-0.redis-headless.sidekiq-sandbox.svc.cluster.local 6379" >> /data/redis.conf
     fi
 
     echo "Redis configuration initialized"
@@ -33,17 +39,17 @@ data:
   sentinel-init.sh: |
     #!/bin/bash
     set -e
-    INIT_MARKER=/etc/redis/.init-sentinel-done
+    INIT_MARKER=/data/.init-sentinel-done
     if [ -f "$INIT_MARKER" ]; then
       echo "Sentinel configuration already initialized"
       exit 0
     fi
 
     REDIS_PASSWORD=$(cat /etc/redis-password/password)
-    cat > /etc/redis/sentinel.conf <<EOF
+    cat > /data/sentinel.conf <<EOF
     bind 0.0.0.0
     port 26379
-    dir /etc/redis
+    dir /data
     sentinel monitor mymaster redis-0.redis-headless.sidekiq-sandbox.svc.cluster.local 6379 2
     sentinel auth-pass mymaster $REDIS_PASSWORD
     sentinel down-after-milliseconds mymaster 5000
@@ -117,11 +123,11 @@ spec:
     spec:
       containers:
       - name: redis
-        image: localhost:30500/custom-redis:latest
-        command: ["/bin/bash", "-c", "/scripts/redis-init.sh && exec redis-server /etc/redis/redis.conf"]
+        image: redis:7.0.15
+        command: ["/bin/bash", "-c", "/scripts/redis-init.sh && exec redis-server /data/redis.conf"]
         volumeMounts:
         - name: data
-          mountPath: /etc/redis
+          mountPath: /data
         - name: scripts
           mountPath: /scripts
         - name: redis-password
@@ -171,8 +177,8 @@ spec:
     spec:
       containers:
       - name: sentinel
-        image: localhost:30500/custom-redis:latest
-        command: ["/bin/bash", "-c", "/scripts/sentinel-init.sh && exec redis-sentinel /etc/redis/sentinel.conf"]
+        image: redis:7.0.15
+        command: ["/bin/bash", "-c", "/scripts/sentinel-init.sh && exec redis-sentinel /data/sentinel.conf"]
         env:
         - name: POD_IP
           valueFrom:
@@ -180,7 +186,7 @@ spec:
               fieldPath: status.podIP
         volumeMounts:
         - name: data
-          mountPath: /etc/redis
+          mountPath: /data
         - name: scripts
           mountPath: /scripts
         - name: redis-password
