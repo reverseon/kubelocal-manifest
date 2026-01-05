@@ -16,7 +16,7 @@ spec:
       containers:
       - name: web
         image: sidekiq-trial-app:latest
-        imagePullPolicy: Always
+        imagePullPolicy: Never
         ports:
         - containerPort: 3000
           name: http
@@ -126,7 +126,7 @@ spec:
       containers:
       - name: sidekiq
         image: sidekiq-trial-app:latest
-        imagePullPolicy: Always
+        imagePullPolicy: Never
         command: ["bundle", "exec", "sidekiq"]
         env:
         - name: RAILS_ENV
