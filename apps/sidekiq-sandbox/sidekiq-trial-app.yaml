@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
       - name: web
-        image: localhost:30500/sidekiq-trial-app:latest
+        image: sidekiq-trial-app:latest
         imagePullPolicy: Always
         ports:
         - containerPort: 3000
@@ -125,7 +125,7 @@ spec:
     spec:
       containers:
       - name: sidekiq
-        image: localhost:30500/sidekiq-trial-app:latest
+        image: sidekiq-trial-app:latest
         imagePullPolicy: Always
         command: ["bundle", "exec", "sidekiq"]
         env:
