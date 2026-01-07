@@ -67,7 +67,7 @@ spec:
     app: redisinsight
   ports:
   - name: http
-    port: 18081
+    port: 32081
     targetPort: http
-    nodePort: 18081
+    nodePort: 32081
 
