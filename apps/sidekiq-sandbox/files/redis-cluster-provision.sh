@@ -143,7 +143,8 @@ requirepass $REDIS_PASSWORD
 masterauth $REDIS_PASSWORD
 
 loglevel notice
-logfile $PERSISTENT_MOUNT_PATH/redis/log/redis.log
+# logfile $PERSISTENT_MOUNT_PATH/redis/log/redis.log
+logfile "" # to stdout
 
 appendonly yes
 appendfilename "appendonly.aof"
