@@ -22,14 +22,6 @@ error_if_env_not_set PERSISTENT_MOUNT_PATH
 error_if_env_not_set REDIS_PASSWORD
 error_if_env_not_set REDIS_MASTER_HOST_NAME
 
-# equivalent to copy: dest=/etc/profile.d/tz.sh content=... mode=0755
-mkdir -p /etc/profile.d 2>/dev/null || true
-tee /etc/profile.d/tz.sh >/dev/null <<'EOF'
-export TZ='Asia/Tokyo'
-EOF
-chmod 0755 /etc/profile.d/tz.sh 2>/dev/null || true
-chown root:root /etc/profile.d/tz.sh 2>/dev/null || true
-
 # Sysctl
 # Commented out - these are now configured via Kubernetes securityContext.sysctls
 
@@ -163,8 +155,4 @@ dbfilename redis.rdb
 min-replicas-to-write 2
 EOF
 
-# Disable THP
-
-if [ -w /sys/kernel/mm/transparent_hugepage/enabled ]; then
-  echo never > /sys/kernel/mm/transparent_hugepage/enabled
-fi
+# Disable THP (requires privileged/root; intentionally skipped for non-root pods)
