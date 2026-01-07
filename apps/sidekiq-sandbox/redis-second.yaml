@@ -47,7 +47,7 @@ spec:
         - name: TZ
           value: "Asia/Tokyo"
         - name: PERSISTENT_MOUNT_PATH
-          value: "/data"
+          value: "/mydata"
         - name: REDIS_PASSWORD
           valueFrom:
             secretKeyRef:
@@ -60,8 +60,8 @@ spec:
         volumeMounts:
         - name: scripts
           mountPath: /scripts
-        - name: data
-          mountPath: /data
+        - name: mydata
+          mountPath: /mydata
         securityContext:
           allowPrivilegeEscalation: false
           runAsNonRoot: true
@@ -75,7 +75,7 @@ spec:
         - -c
         - |
           ulimit -n 16000
-          redis-server /data/redis/redis.conf
+          redis-server /mydata/redis/redis.conf
         env:
         - name: TZ
           value: "Asia/Tokyo"
@@ -88,8 +88,8 @@ spec:
         - containerPort: 6379
           name: redis
         volumeMounts:
-        - name: data
-          mountPath: /data
+        - name: mydata
+          mountPath: /mydata
         resources:
           requests:
             memory: "512Mi"
@@ -121,7 +121,7 @@ spec:
           defaultMode: 0755
   volumeClaimTemplates:
   - metadata:
-      name: data
+      name: mydata
     spec:
       accessModes: [ "ReadWriteOnce" ]
       resources:
@@ -178,7 +178,7 @@ spec:
         - name: TZ
           value: "Asia/Tokyo"
         - name: PERSISTENT_MOUNT_PATH
-          value: "/data"
+          value: "/mydata"
         - name: REDIS_PASSWORD
           valueFrom:
             secretKeyRef:
@@ -189,8 +189,8 @@ spec:
         volumeMounts:
         - name: scripts
           mountPath: /scripts
-        - name: data
-          mountPath: /data
+        - name: mydata
+          mountPath: /mydata
         securityContext:
           allowPrivilegeEscalation: false
           runAsNonRoot: true
@@ -204,7 +204,7 @@ spec:
         - -c
         - |
           ulimit -n 16000
-          redis-server /data/redis-sentinel/sentinel.conf --sentinel
+          redis-server /mydata/redis-sentinel/sentinel.conf --sentinel
         env:
         - name: TZ
           value: "Asia/Tokyo"
@@ -220,8 +220,8 @@ spec:
         - name: scripts
           mountPath: /scripts
           readOnly: true
-        - name: data
-          mountPath: /data
+        - name: mydata
+          mountPath: /mydata
         securityContext:
           allowPrivilegeEscalation: false
           runAsNonRoot: true
@@ -248,7 +248,7 @@ spec:
           defaultMode: 0755
   volumeClaimTemplates:
   - metadata:
-      name: data
+      name: mydata
     spec:
       accessModes: [ "ReadWriteOnce" ]
       resources:
