@@ -20,7 +20,8 @@ error_if_env_not_set() {
 
 error_if_env_not_set PERSISTENT_MOUNT_PATH
 error_if_env_not_set REDIS_PASSWORD
-error_if_env_not_set REDIS_MASTER_HOST_NAME
+error_if_env_not_set REDIS_MASTER_HOSTNAME
+error_if_env_not_set REDIS_MASTER_CLUSTER_DNS_NAME
 
 # Sysctl
 # Commented out - these are now configured via Kubernetes securityContext.sysctls
@@ -69,8 +70,8 @@ mkdir -p "$PERSISTENT_MOUNT_PATH/redis/tmp"
 
 current_hostname="$(hostname -s 2>/dev/null || hostname)"
 replicaof_line=""
-if [ "$current_hostname" != "$REDIS_MASTER_HOST_NAME" ]; then
-  replicaof_line="replicaof $REDIS_MASTER_HOST_NAME 6379"
+if [ "$current_hostname" != "$REDIS_MASTER_HOSTNAME" ]; then
+  replicaof_line="replicaof $REDIS_MASTER_CLUSTER_DNS_NAME 6379"
 fi
 
 tee "$PERSISTENT_MOUNT_PATH/redis/redis.conf" >/dev/null <<EOF

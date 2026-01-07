@@ -53,7 +53,9 @@ spec:
             secretKeyRef:
               name: redis-password
               key: password
-        - name: REDIS_MASTER_HOST_NAME
+        - name: REDIS_MASTER_HOSTNAME
+          value: "redis-0"
+        - name: REDIS_MASTER_CLUSTER_DNS_NAME
           value: "redis-0.redis.sidekiq-sandbox.svc.cluster.local"
         volumeMounts:
         - name: scripts
