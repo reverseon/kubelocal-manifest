@@ -68,7 +68,9 @@ touch "$PERSISTENT_MOUNT_PATH/redis-sentinel/log/sentinel-notify.log"
 tee "$PERSISTENT_MOUNT_PATH/redis-sentinel/sentinel.conf" >/dev/null <<EOF
 port 26379
 dir $PERSISTENT_MOUNT_PATH/redis-sentinel/tmp
-logfile $PERSISTENT_MOUNT_PATH/redis-sentinel/log/redis-sentinel.log
+# logfile $PERSISTENT_MOUNT_PATH/redis-sentinel/log/redis-sentinel.log
+# to stdout instead
+logfile "" 
 requirepass $REDIS_PASSWORD
 sentinel resolve-hostnames yes
 

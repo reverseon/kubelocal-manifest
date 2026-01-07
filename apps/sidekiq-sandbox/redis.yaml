@@ -217,6 +217,9 @@ spec:
         - containerPort: 26379
           name: sentinel
         volumeMounts:
+        - name: scripts
+          mountPath: /scripts
+          readOnly: true
         - name: data
           mountPath: /data
         securityContext:
