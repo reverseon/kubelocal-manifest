@@ -5,3 +5,10 @@ resources:
 - namespace.yaml
 - opebox.yaml
 - redisinsight.yaml
+
+configMapGenerator:
+- name: static-files
+  files:
+  - files/populate.py
+  options:
+    disableNameSuffixHash: true

@@ -42,11 +42,18 @@ spec:
         volumeMounts:
         - name: ephemeral-storage
           mountPath: /tmp
+        - name: static-files
+          mountPath: /static
+          readOnly: true
         - name: opebox-root
           mountPath: /root
       volumes:
       - name: ephemeral-storage
         emptyDir: {}
+      - name: static-files
+        configMap:
+          name: static-files
+          defaultMode: 0755
       - name: opebox-root
         persistentVolumeClaim:
           claimName: opebox-root-pvc
@@ -84,7 +91,14 @@ spec:
         volumeMounts:
         - name: ephemeral-storage
           mountPath: /tmp
+        - name: static-files
+          mountPath: /static
+          readOnly: true
       volumes:
       - name: ephemeral-storage
         emptyDir: {}
+      - name: static-files
+        configMap:
+          name: static-files
+          defaultMode: 0755
       restartPolicy: Always
