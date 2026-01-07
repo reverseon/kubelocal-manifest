@@ -1,172 +1,25 @@
----
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: redis-scripts
-  namespace: sidekiq-sandbox
-data:
-  redis-init.sh: |
-    #!/bin/bash
-    set -e
-
-    REDIS_PASSWORD=$(cat /etc/redis-password/password)
-    cat > /data/redis.conf <<EOF
-    bind 0.0.0.0
-    protected-mode yes
-    port 6379
-    tcp-backlog 511
-    timeout 0
-    tcp-keepalive 300
-    daemonize no
-    pidfile /data/redis.pid
-    loglevel notice
-    logfile ""
-    databases 16
-    always-show-logo no
-    set-proc-title yes
-    proc-title-template "{title} {listen-addr} {server-mode}"
-    stop-writes-on-bgsave-error yes
-    rdbcompression yes
-    rdbchecksum yes
-    dbfilename dump.rdb
-    rdb-del-sync-files no
-    dir /data
-    replica-serve-stale-data yes
-    replica-read-only yes
-    repl-diskless-sync yes
-    repl-diskless-sync-delay 5
-    repl-diskless-sync-max-replicas 0
-    repl-diskless-load disabled
-    repl-disable-tcp-nodelay no
-    replica-priority 100
-    acllog-max-len 128
-    requirepass $REDIS_PASSWORD
-    masterauth $REDIS_PASSWORD
-    maxmemory-policy noeviction
-    lazyfree-lazy-eviction no
-    lazyfree-lazy-expire no
-    lazyfree-lazy-server-del no
-    replica-lazy-flush no
-    lazyfree-lazy-user-del no
-    lazyfree-lazy-user-flush no
-    oom-score-adj no
-    oom-score-adj-values 0 200 800
-    disable-thp yes
-    appendonly yes
-    appendfilename "appendonly.aof"
-    appenddirname "appendonlydir"
-    appendfsync everysec
-    no-appendfsync-on-rewrite no
-    auto-aof-rewrite-percentage 100
-    auto-aof-rewrite-min-size 64mb
-    aof-load-truncated yes
-    aof-use-rdb-preamble yes
-    aof-timestamp-enabled no
-    slowlog-log-slower-than 10000
-    slowlog-max-len 128
-    latency-monitor-threshold 0
-    notify-keyspace-events ""
-    hash-max-listpack-entries 512
-    hash-max-listpack-value 64
-    list-max-listpack-size -2
-    list-compress-depth 0
-    set-max-intset-entries 512
-    zset-max-listpack-entries 128
-    zset-max-listpack-value 64
-    hll-sparse-max-bytes 3000
-    stream-node-max-bytes 4096
-    stream-node-max-entries 100
-    activerehashing yes
-    client-output-buffer-limit normal 0 0 0
-    client-output-buffer-limit replica 256mb 64mb 60
-    client-output-buffer-limit pubsub 32mb 8mb 60
-    hz 10
-    dynamic-hz yes
-    aof-rewrite-incremental-fsync yes
-    rdb-save-incremental-fsync yes
-    jemalloc-bg-thread yes
-    EOF
-
-    if [[ "$HOSTNAME" =~ -([0-9]+)$ ]]; then
-      ORDINAL=${BASH_REMATCH[1]}
-    else
-      ORDINAL=0
-    fi
-    if [[ "$ORDINAL" != "0" ]]; then
-      echo "replicaof redis-0.redis-headless.sidekiq-sandbox.svc.cluster.local 6379" >> /data/redis.conf
-    fi
-
-    echo "Redis configuration initialized"
-  sentinel-init.sh: |
-    #!/bin/bash
-    set -e
-
-    REDIS_PASSWORD=$(cat /etc/redis-password/password)
-    cat > /data/sentinel.conf <<EOF
-    bind 0.0.0.0
-    port 26379
-    dir /data
-    sentinel monitor mymaster redis-0.redis-headless.sidekiq-sandbox.svc.cluster.local 6379 2
-    sentinel auth-pass mymaster $REDIS_PASSWORD
-    sentinel down-after-milliseconds mymaster 5000
-    sentinel parallel-syncs mymaster 1
-    sentinel failover-timeout mymaster 10000
-    sentinel announce-ip ${POD_IP}
-    sentinel announce-port 26379
-    sentinel resolve-hostnames yes
-    EOF
-
-    echo "Sentinel configuration initialized"
----
 apiVersion: v1
 kind: Service
 metadata:
-  name: redis-headless
+  name: redis
   namespace: sidekiq-sandbox
 spec:
   clusterIP: None
   selector:
     app: redis
   ports:
-  - name: redis
-    port: 6379
+  - port: 6379
     targetPort: 6379
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: redis
-  namespace: sidekiq-sandbox
-spec:
-  selector:
-    app: redis
-  ports:
-  - name: redis
-    port: 6379
-    targetPort: 6379
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: redis-sentinel
-  namespace: sidekiq-sandbox
-spec:
-  selector:
-    app: redis-sentinel
-  ports:
-  - name: sentinel
-    port: 26379
-    targetPort: 26379
+    name: redis
+
 ---
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
   name: redis
   namespace: sidekiq-sandbox
-  annotations:
-    argocd.argoproj.io/sync-options: Replace=true
 spec:
-  serviceName: redis-headless
+  serviceName: redis
   replicas: 3
   selector:
     matchLabels:
@@ -176,143 +29,81 @@ spec:
       labels:
         app: redis
     spec:
+      securityContext:
+        fsGroup: 999
+      initContainers:
+      - name: setup
+        image: redis:6.2.20-bullseye
+        command:
+        - /bin/bash
+        - -c
+        - |
+          chmod +x /scripts/redis-cluster-provision.sh
+          /scripts/redis-cluster-provision.sh
+        env:
+        - name: PERSISTENT_MOUNT_PATH
+          value: "/data"
+        - name: REDIS_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: redis-secret
+              key: password
+        - name: REDIS_MASTER_HOST_NAME
+          value: "redis-0"
+        volumeMounts:
+        - name: scripts
+          mountPath: /scripts
+        - name: data
+          mountPath: /data
+        securityContext:
+          privileged: true
+          runAsUser: 0
       containers:
       - name: redis
-        image: redis:7.0.15
-        command: ["/bin/bash", "-c", "/scripts/redis-init.sh && exec redis-server /data/redis.conf"]
+        image: redis:6.2.20-bookworm
+        command:
+        - /bin/bash
+        - -c
+        - |
+          ulimit -n 16000
+          redis-server /data/redis/redis.conf
+        ports:
+        - containerPort: 6379
+          name: redis
         volumeMounts:
         - name: data
           mountPath: /data
-        - name: scripts
-          mountPath: /scripts
-        - name: redis-password
-          mountPath: /etc/redis-password
-          readOnly: true
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "2Gi"
+            cpu: "1000m"
+        securityContext:
+          runAsUser: 0
         livenessProbe:
-          exec:
-            command: ["sh", "-c", "redis-cli -a $(cat /etc/redis-password/password) ping"]
+          tcpSocket:
+            port: 6379
           initialDelaySeconds: 30
           periodSeconds: 10
         readinessProbe:
           exec:
-            command: ["sh", "-c", "redis-cli -a $(cat /etc/redis-password/password) ping"]
-          initialDelaySeconds: 5
+            command:
+            - redis-cli
+            - ping
+          initialDelaySeconds: 15
           periodSeconds: 5
       volumes:
       - name: scripts
         configMap:
-          name: redis-scripts
+          name: static-files
           defaultMode: 0755
-      - name: redis-password
-        secret:
-          secretName: redis-password
   volumeClaimTemplates:
   - metadata:
       name: data
     spec:
-      accessModes: ["ReadWriteOnce"]
+      accessModes: [ "ReadWriteOnce" ]
       resources:
         requests:
-          storage: 1Gi
----
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: redis-sentinel
-  namespace: sidekiq-sandbox
-spec:
-  replicas: 3
-  selector:
-    matchLabels:
-      app: redis-sentinel
-  template:
-    metadata:
-      labels:
-        app: redis-sentinel
-    spec:
-      containers:
-      - name: sentinel
-        image: redis:7.0.15
-        command: ["/bin/bash", "-c", "/scripts/sentinel-init.sh && exec redis-sentinel /data/sentinel.conf"]
-        env:
-        - name: POD_IP
-          valueFrom:
-            fieldRef:
-              fieldPath: status.podIP
-        volumeMounts:
-        - name: data
-          mountPath: /data
-        - name: scripts
-          mountPath: /scripts
-        - name: redis-password
-          mountPath: /etc/redis-password
-          readOnly: true
-        ports:
-        - containerPort: 26379
-          name: sentinel
-        livenessProbe:
-          exec:
-            command: ["redis-cli", "-p", "26379", "ping"]
-          initialDelaySeconds: 30
-          periodSeconds: 10
-        readinessProbe:
-          exec:
-            command: ["redis-cli", "-p", "26379", "ping"]
-          initialDelaySeconds: 5
-          periodSeconds: 5
-      volumes:
-      - name: data
-        emptyDir: {}
-      - name: scripts
-        configMap:
-          name: redis-scripts
-          defaultMode: 0755
-      - name: redis-password
-        secret:
-          secretName: redis-password
----
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: redisinsight-pvc
-  namespace: sidekiq-sandbox
-spec:
-  accessModes:
-  - ReadWriteOnce
-  resources:
-    requests:
-      storage: 1Gi
----
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: redisinsight
-  namespace: sidekiq-sandbox
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: redisinsight
-  template:
-    metadata:
-      labels:
-        app: redisinsight
-    spec:
-      hostNetwork: true
-      containers:
-      - name: redisinsight
-        image: redis/redisinsight:latest
-        ports:
-        - containerPort: 8124
-          name: http
-          protocol: TCP
-        env:
-        - name: RI_APP_PORT
-          value: "8124"
-        volumeMounts:
-        - name: redisinsight-data
-          mountPath: /data
-      volumes:
-      - name: redisinsight-data
-        persistentVolumeClaim:
-          claimName: redisinsight-pvc
+          storage: 10Gi

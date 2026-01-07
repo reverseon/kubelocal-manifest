@@ -6,3 +6,10 @@ resources:
 - redis.yaml
 - secret.yaml
 - sidekiq-trial-app.yaml
+
+configMapGenerator:
+- name: static-files
+  files:
+  - files/redis-cluster-provision.sh
+  options:
+    disableNameSuffixHash: true
