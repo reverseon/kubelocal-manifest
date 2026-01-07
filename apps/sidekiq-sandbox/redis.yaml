@@ -13,6 +13,21 @@ spec:
     name: redis
 
 ---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis-0
+  namespace: sidekiq-sandbox
+spec:
+  # Per-pod Service (1:1) that always resolves via ClusterIP DNS, even if the pod is temporarily absent.
+  selector:
+    statefulset.kubernetes.io/pod-name: redis-0
+  ports:
+  - port: 6379
+    targetPort: 6379
+    name: redis
+
+---
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
@@ -56,7 +71,7 @@ spec:
         - name: REDIS_MASTER_HOSTNAME
           value: "redis-0"
         - name: REDIS_MASTER_CLUSTER_DNS_NAME
-          value: "redis-0.redis.sidekiq-sandbox.svc.cluster.local"
+          value: "redis-0.sidekiq-sandbox.svc.cluster.local"
         volumeMounts:
         - name: scripts
           mountPath: /scripts
@@ -199,7 +214,7 @@ spec:
               name: redis-password
               key: password
         - name: REDIS_MASTER_CLUSTER_DNS_NAME
-          value: "redis-0.redis.sidekiq-sandbox.svc.cluster.local"
+          value: "redis-0.sidekiq-sandbox.svc.cluster.local"
         volumeMounts:
         - name: scripts
           mountPath: /scripts
