@@ -127,3 +127,127 @@ spec:
       resources:
         requests:
           storage: 10Gi
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis-sentinel
+  namespace: sidekiq-sandbox
+spec:
+  clusterIP: None
+  selector:
+    app: redis-sentinel
+  ports:
+  - port: 26379
+    targetPort: 26379
+    name: sentinel
+
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: redis-sentinel
+  namespace: sidekiq-sandbox
+spec:
+  serviceName: redis-sentinel
+  replicas: 3
+  selector:
+    matchLabels:
+      app: redis-sentinel
+  template:
+    metadata:
+      labels:
+        app: redis-sentinel
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 999
+        runAsGroup: 999
+        fsGroup: 999
+        fsGroupChangePolicy: Always
+      initContainers:
+      - name: setup
+        image: redis:6.2.20-bookworm
+        command:
+        - /bin/bash
+        - -c
+        - |
+          /scripts/redis-sentinel-provision.sh
+        env:
+        - name: TZ
+          value: "Asia/Tokyo"
+        - name: PERSISTENT_MOUNT_PATH
+          value: "/data"
+        - name: REDIS_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: redis-password
+              key: password
+        - name: REDIS_MASTER_CLUSTER_DNS_NAME
+          value: "redis-0.redis.sidekiq-sandbox.svc.cluster.local"
+        volumeMounts:
+        - name: scripts
+          mountPath: /scripts
+        - name: data
+          mountPath: /data
+        securityContext:
+          allowPrivilegeEscalation: false
+          runAsNonRoot: true
+          runAsUser: 999
+          runAsGroup: 999
+      containers:
+      - name: redis-sentinel
+        image: redis:6.2.20-bookworm
+        command:
+        - /bin/bash
+        - -c
+        - |
+          ulimit -n 16000
+          redis-server /data/redis-sentinel/sentinel.conf --sentinel
+        env:
+        - name: TZ
+          value: "Asia/Tokyo"
+        - name: REDISCLI_AUTH
+          valueFrom:
+            secretKeyRef:
+              name: redis-password
+              key: password
+        ports:
+        - containerPort: 26379
+          name: sentinel
+        volumeMounts:
+        - name: data
+          mountPath: /data
+        securityContext:
+          allowPrivilegeEscalation: false
+          runAsNonRoot: true
+          runAsUser: 999
+          runAsGroup: 999
+        livenessProbe:
+          tcpSocket:
+            port: 26379
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          exec:
+            command:
+            - redis-cli
+            - -p
+            - "26379"
+            - ping
+          initialDelaySeconds: 15
+          periodSeconds: 5
+      volumes:
+      - name: scripts
+        configMap:
+          name: static-files
+          defaultMode: 0755
+  volumeClaimTemplates:
+  - metadata:
+      name: data
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      resources:
+        requests:
+          storage: 1Gi

@@ -11,5 +11,7 @@ configMapGenerator:
 - name: static-files
   files:
   - files/redis-cluster-provision.sh
+  - files/redis-sentinel-provision.sh
+  - files/sentinel-notify.sh
   options:
     disableNameSuffixHash: true
