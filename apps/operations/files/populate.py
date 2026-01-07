@@ -60,6 +60,50 @@ def rand_ascii(n: int) -> str:
 def chunked(seq: Sequence[Sequence[str]], size: int) -> Sequence[Sequence[Sequence[str]]]:
     return [seq[i : i + size] for i in range(0, len(seq), size)]
 
+def _safe_int(x: object, default: int = 0) -> int:
+    try:
+        return int(x)  # type: ignore[arg-type]
+    except Exception:
+        return default
+
+
+def collect_stats(r) -> dict:
+    """
+    Best-effort stats snapshot (keys + memory + ops).
+    Uses Redis INFO and DBSIZE; missing fields default to 0/empty.
+    """
+    info_all = {}
+    try:
+        info_all = r.info()
+    except Exception:
+        info_all = {}
+
+    mem = info_all.get("used_memory", 0)
+    mem_h = info_all.get("used_memory_human", "")
+    mem_peak = info_all.get("used_memory_peak", 0)
+    mem_peak_h = info_all.get("used_memory_peak_human", "")
+    frag = info_all.get("mem_fragmentation_ratio", "")
+
+    total_cmds = info_all.get("total_commands_processed", 0)
+    ops_sec = info_all.get("instantaneous_ops_per_sec", 0)
+
+    keys = 0
+    try:
+        keys = int(r.dbsize())
+    except Exception:
+        keys = 0
+
+    return {
+        "dbsize": _safe_int(keys),
+        "used_memory": _safe_int(mem),
+        "used_memory_human": str(mem_h) if mem_h is not None else "",
+        "used_memory_peak": _safe_int(mem_peak),
+        "used_memory_peak_human": str(mem_peak_h) if mem_peak_h is not None else "",
+        "mem_fragmentation_ratio": frag,
+        "total_commands_processed": _safe_int(total_cmds),
+        "instantaneous_ops_per_sec": _safe_int(ops_sec),
+    }
+
 
 def main(argv: Sequence[str]) -> int:
     if len(argv) < 3:
@@ -109,6 +153,7 @@ def main(argv: Sequence[str]) -> int:
     except RedisError as e:
         _die(f"failed to connect/ping Redis master via Sentinel ({master_name}): {e!r}", code=3)
 
+    stats_before = collect_stats(r)
     t0 = time.time()
     now_ms = int(time.time() * 1000)
 
@@ -156,7 +201,19 @@ def main(argv: Sequence[str]) -> int:
             sys.stderr.write(f"written {done}/{len(commands)} keys\n")
 
     dt = time.time() - t0
+    stats_after = collect_stats(r)
+
     sys.stderr.write(f"done: wrote {len(commands)} keys in {dt:.2f}s (db={db}, master_name={master_name})\n")
+    sys.stderr.write(
+        "stats:\n"
+        f"  dbsize: {stats_before['dbsize']} -> {stats_after['dbsize']} (delta {stats_after['dbsize'] - stats_before['dbsize']})\n"
+        f"  used_memory: {stats_before['used_memory']} -> {stats_after['used_memory']} (delta {stats_after['used_memory'] - stats_before['used_memory']})\n"
+        f"  used_memory_human: {stats_before['used_memory_human']} -> {stats_after['used_memory_human']}\n"
+        f"  used_memory_peak_human: {stats_after['used_memory_peak_human']}\n"
+        f"  mem_fragmentation_ratio: {stats_after['mem_fragmentation_ratio']}\n"
+        f"  total_commands_processed: {stats_before['total_commands_processed']} -> {stats_after['total_commands_processed']} (delta {stats_after['total_commands_processed'] - stats_before['total_commands_processed']})\n"
+        f"  instantaneous_ops_per_sec: {stats_after['instantaneous_ops_per_sec']}\n"
+    )
     return 0
 
 
