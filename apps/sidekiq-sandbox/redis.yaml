@@ -54,7 +54,7 @@ spec:
               name: redis-password
               key: password
         - name: REDIS_MASTER_HOST_NAME
-          value: "redis-0"
+          value: "redis-0.redis.sidekiq-sandbox.svc.cluster.local"
         volumeMounts:
         - name: scripts
           mountPath: /scripts
