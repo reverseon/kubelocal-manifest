@@ -33,7 +33,7 @@ spec:
         fsGroup: 999
       initContainers:
       - name: setup
-        image: redis:6.2.20-bullseye
+        image: redis:6.2.20-bookworm
         command:
         - /bin/bash
         - -c
