@@ -198,13 +198,13 @@ def main(argv: Sequence[str]) -> int:
 
         done += len(batch)
         if done == len(commands) or done % 10_000 == 0:
-            sys.stderr.write(f"written {done}/{len(commands)} keys\n")
+            print(f"written {done}/{len(commands)} keys", file=sys.stderr, flush=True)
 
     dt = time.time() - t0
     stats_after = collect_stats(r)
 
-    sys.stderr.write(f"done: wrote {len(commands)} keys in {dt:.2f}s (db={db}, master_name={master_name})\n")
-    sys.stderr.write(
+    print(f"done: wrote {len(commands)} keys in {dt:.2f}s (db={db}, master_name={master_name})", file=sys.stderr, flush=True)
+    print(
         "stats:\n"
         f"  dbsize: {stats_before['dbsize']} -> {stats_after['dbsize']} (delta {stats_after['dbsize'] - stats_before['dbsize']})\n"
         f"  used_memory: {stats_before['used_memory']} -> {stats_after['used_memory']} (delta {stats_after['used_memory'] - stats_before['used_memory']})\n"
@@ -212,7 +212,9 @@ def main(argv: Sequence[str]) -> int:
         f"  used_memory_peak_human: {stats_after['used_memory_peak_human']}\n"
         f"  mem_fragmentation_ratio: {stats_after['mem_fragmentation_ratio']}\n"
         f"  total_commands_processed: {stats_before['total_commands_processed']} -> {stats_after['total_commands_processed']} (delta {stats_after['total_commands_processed'] - stats_before['total_commands_processed']})\n"
-        f"  instantaneous_ops_per_sec: {stats_after['instantaneous_ops_per_sec']}\n"
+        f"  instantaneous_ops_per_sec: {stats_after['instantaneous_ops_per_sec']}\n",
+        file=sys.stderr,
+        flush=True,
     )
     return 0
 
