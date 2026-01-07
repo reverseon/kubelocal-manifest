@@ -74,7 +74,7 @@ logfile ""
 requirepass $REDIS_PASSWORD
 sentinel resolve-hostnames yes
 
-sentinel down-after-milliseconds cluster_name 6000
+sentinel down-after-milliseconds cluster_name 1
 sentinel failover-timeout cluster_name 18000
 sentinel auth-pass cluster_name $REDIS_PASSWORD
 sentinel notification-script cluster_name /scripts/sentinel-notify.sh
