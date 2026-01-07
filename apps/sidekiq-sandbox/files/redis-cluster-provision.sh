@@ -4,6 +4,10 @@ set -euo pipefail
 
 # Common functions
 
+command_exists() {
+  command -v "$1" >/dev/null 2>&1
+}
+
 error_if_env_not_set() {
   local env_var="$1"
   if [ -z "${!env_var}" ]; then
@@ -18,16 +22,13 @@ error_if_env_not_set PERSISTENT_MOUNT_PATH
 error_if_env_not_set REDIS_PASSWORD
 error_if_env_not_set REDIS_MASTER_HOST_NAME
 
-# Timezone
-
-sudo timedatectl set-timezone Asia/Tokyo
-
 # equivalent to copy: dest=/etc/profile.d/tz.sh content=... mode=0755
-sudo tee /etc/profile.d/tz.sh >/dev/null <<'EOF'
+mkdir -p /etc/profile.d 2>/dev/null || true
+tee /etc/profile.d/tz.sh >/dev/null <<'EOF'
 export TZ='Asia/Tokyo'
 EOF
-sudo chmod 0755 /etc/profile.d/tz.sh
-sudo chown root:root /etc/profile.d/tz.sh
+chmod 0755 /etc/profile.d/tz.sh 2>/dev/null || true
+chown root:root /etc/profile.d/tz.sh 2>/dev/null || true
 
 # Sysctl
 # Commented out - these are now configured via Kubernetes securityContext.sysctls
@@ -80,7 +81,7 @@ if [ "$current_hostname" != "$REDIS_MASTER_HOST_NAME" ]; then
   replicaof_line="replicaof $REDIS_MASTER_HOST_NAME 6379"
 fi
 
-sudo tee "$PERSISTENT_MOUNT_PATH/redis/redis.conf" >/dev/null <<EOF
+tee "$PERSISTENT_MOUNT_PATH/redis/redis.conf" >/dev/null <<EOF
 # https://raw.githubusercontent.com/redis/redis/6.2/redis.conf
 
 ## Common Configs ##
@@ -164,4 +165,6 @@ EOF
 
 # Disable THP
 
-echo never > /sys/kernel/mm/transparent_hugepage/enabled
+if [ -w /sys/kernel/mm/transparent_hugepage/enabled ]; then
+  echo never > /sys/kernel/mm/transparent_hugepage/enabled
+fi

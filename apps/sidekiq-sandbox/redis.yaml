@@ -67,6 +67,12 @@ spec:
         - |
           ulimit -n 16000
           redis-server /data/redis/redis.conf
+        env:
+        - name: REDISCLI_AUTH
+          valueFrom:
+            secretKeyRef:
+              name: redis-password
+              key: password
         ports:
         - containerPort: 6379
           name: redis
