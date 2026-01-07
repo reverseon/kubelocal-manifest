@@ -75,7 +75,21 @@ spec:
         - -c
         - |
           ulimit -n 16000
-          redis-server /data/redis/redis.conf
+          redis-server /data/redis/redis.conf &
+          pid="$!"
+
+          term_handler() {
+            # Kubelet sent SIGTERM to PID 1 (this script). Forward it to redis-server,
+            # wait for redis-server to exit, then hold the container for 10s to delay
+            # pod termination/recreation (leader election time).
+            kill -TERM "$pid" 2>/dev/null || true
+            wait "$pid" 2>/dev/null || true
+            sleep 10
+            exit 0
+          }
+
+          trap term_handler TERM INT
+          wait "$pid"
         env:
         - name: TZ
           value: "Asia/Tokyo"
