@@ -4,6 +4,7 @@ namespace: sidekiq-sandbox
 resources:
 - namespace.yaml
 - redis.yaml
+- redis-second.yaml
 - secret.yaml
 - sidekiq-trial-app.yaml
 
