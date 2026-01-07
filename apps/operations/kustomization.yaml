@@ -4,3 +4,4 @@ namespace: operations
 resources:
 - namespace.yaml
 - opebox.yaml
+- redisinsight.yaml
