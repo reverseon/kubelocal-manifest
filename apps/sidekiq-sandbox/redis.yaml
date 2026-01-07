@@ -42,7 +42,6 @@ spec:
         - /bin/bash
         - -c
         - |
-          chmod +x /scripts/redis-cluster-provision.sh
           /scripts/redis-cluster-provision.sh
         env:
         - name: TZ
