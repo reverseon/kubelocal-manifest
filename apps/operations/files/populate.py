@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import os
 import random
+import secrets
 import string
 import sys
 import time
@@ -157,53 +158,88 @@ def main(argv: Sequence[str]) -> int:
     t0 = time.time()
     now_ms = int(time.time() * 1000)
 
+    # Generate exactly N keys:
+    # - key name: <prefix><delimiter><random_suffix>
+    # - data: arbitrary payload; mixed types (SET/HSET/LIST)
+    #
+    # NOTE: Use secrets (not random) for suffixes to avoid collisions and to be
+    # truly unpredictable.
+    delim = "" if key_prefix.endswith(":") else ":"
+
     # Exactly key_count keys, mixed types:
     # - ~50% flat string keys (SET)
-    # - ~35% "nested" namespaced hash keys (HSET)
+    # - ~35% hash keys (HSET)
     # - ~15% list keys (RPUSH)
     n_set = key_count // 2
     n_hset = (key_count - n_set) * 7 // 10
     n_list = key_count - n_set - n_hset
 
-    commands: List[Sequence[str]] = []
+    written = 0
+    pipe = r.pipeline(transaction=False)
+    try:
+        # SET keys
+        for i in range(n_set):
+            suffix = secrets.token_urlsafe(18)
+            key = f"{key_prefix}{delim}{suffix}"
+            value = json.dumps(
+                {
+                    "kind": "string",
+                    "ts_ms": now_ms,
+                    "i": i,
+                    "data": secrets.token_urlsafe(48),
+                },
+                separators=(",", ":"),
+            )
+            pipe.set(key, value)
+            written += 1
 
-    for i in range(n_set):
-        k = f"{key_prefix}{i}"
-        v = json.dumps(
-            {"kind": "flat", "i": i, "ts_ms": now_ms, "payload": rand_ascii(128)},
-            separators=(",", ":"),
-        )
-        commands.append(("SET", k, v))
+            if written % batch_size == 0:
+                pipe.execute()
 
-    for i in range(n_hset):
-        k = f"{key_prefix}:ns:{i}"
-        meta = json.dumps(
-            {"kind": "hash", "i": i, "ts_ms": now_ms, "payload": rand_ascii(64)},
-            separators=(",", ":"),
-        )
-        commands.append(("HSET", k, "a", rand_ascii(16), "b", str(i), "meta", meta))
+        # HSET keys
+        for i in range(n_hset):
+            suffix = secrets.token_urlsafe(18)
+            key = f"{key_prefix}{delim}{suffix}"
+            mapping = {
+                "kind": "hash",
+                "ts_ms": str(now_ms),
+                "i": str(i),
+                "data": secrets.token_urlsafe(48),
+                "rand": str(random.randint(0, 1_000_000_000)),
+            }
+            pipe.hset(key, mapping=mapping)
+            written += 1
 
-    for i in range(n_list):
-        k = f"{key_prefix}:list:{i}"
-        commands.append(("RPUSH", k, rand_ascii(12), rand_ascii(12), rand_ascii(12), rand_ascii(12), rand_ascii(12)))
+            if written % batch_size == 0:
+                pipe.execute()
 
-    random.shuffle(commands)
+        # LIST keys
+        for i in range(n_list):
+            suffix = secrets.token_urlsafe(18)
+            key = f"{key_prefix}{delim}{suffix}"
+            items = [
+                json.dumps(
+                    {"kind": "list_item", "ts_ms": now_ms, "i": i, "data": secrets.token_urlsafe(24)},
+                    separators=(",", ":"),
+                )
+                for _ in range(3)
+            ]
+            pipe.rpush(key, *items)
+            written += 1
 
-    done = 0
-    for batch in chunked(commands, max(1, batch_size)):
-        pipe = r.pipeline(transaction=False)
-        for cmd in batch:
-            pipe.execute_command(*cmd)
-        pipe.execute()
+            if written % batch_size == 0:
+                pipe.execute()
 
-        done += len(batch)
-        if done == len(commands) or done % 10_000 == 0:
-            print(f"written {done}/{len(commands)} keys", file=sys.stderr, flush=True)
+        # Flush remaining commands.
+        if written % batch_size != 0:
+            pipe.execute()
+    except RedisError as e:
+        _die(f"failed while writing keys (written={written}): {e!r}", code=4)
 
     dt = time.time() - t0
     stats_after = collect_stats(r)
 
-    print(f"done: wrote {len(commands)} keys in {dt:.2f}s (db={db}, master_name={master_name})", file=sys.stderr, flush=True)
+    print(f"done: wrote {written} keys in {dt:.2f}s (db={db}, master_name={master_name})", file=sys.stderr, flush=True)
     print(
         "stats:\n"
         f"  dbsize: {stats_before['dbsize']} -> {stats_after['dbsize']} (delta {stats_after['dbsize'] - stats_before['dbsize']})\n"
