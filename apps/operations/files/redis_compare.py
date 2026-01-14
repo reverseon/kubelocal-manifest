@@ -31,6 +31,7 @@ options:
   pipeline_batch: 1000
   allow_unsupported_types: false
   check_values: false
+  progress_interval: 1000  # Report progress every N keys
 
 Usage:
 ------
@@ -117,6 +118,7 @@ def load_config(
     options.setdefault("pipeline_batch", 1000)
     options.setdefault("allow_unsupported_types", False)
     options.setdefault("check_values", False)
+    options.setdefault("progress_interval", 1000)
 
     return a_conf, b_conf, options
 
@@ -292,13 +294,19 @@ def canonical_value_bytes(r: redis.Redis, key: str, typ: str, allow_unsupported:
         raise ValueError(f"Unsupported Redis type: {typ!r}")
 
 
-def digest_db(r: redis.Redis, options: Dict[str, Any]) -> Tuple[bytes, Dict[str, Any]]:
+def digest_db(r: redis.Redis, options: Dict[str, Any], label: str = "") -> Tuple[bytes, Dict[str, Any]]:
     """
     Compute order-independent digest of the Redis database.
     Returns (digest_bytes, stats_dict).
+    
+    Args:
+        r: Redis connection
+        options: Options dictionary
+        label: Optional label for progress reporting (e.g., "A", "B")
     """
     scan_count = options["scan_count"]
     allow_unsupported = options["allow_unsupported_types"]
+    progress_interval = options.get("progress_interval", 1000)
 
     accumulator = bytearray(32)  # 32 bytes for SHA256
     key_count = 0
@@ -336,6 +344,11 @@ def digest_db(r: redis.Redis, options: Dict[str, Any]) -> Tuple[bytes, Dict[str,
                 accumulator[i] ^= h[i]
 
             total_bytes += len(canonical)
+            
+            # Progress reporting
+            if label and key_count % progress_interval == 0:
+                sys.stderr.write(f"[{label}] Processed {key_count} keys, {total_bytes} bytes\n")
+                sys.stderr.flush()
 
     except RedisError as e:
         _die(f"Redis error during digest scan: {e!r}", code=4)
@@ -453,14 +466,14 @@ def mode_digest(
     if target == "a":
         if a is None:
             _die("Target 'a' specified but connection A not configured", code=2)
-        digest_a, stats_a = digest_db(a, options)
+        digest_a, stats_a = digest_db(a, options, label="A")
         print(f"A_DIGEST {digest_a.hex()} keys={stats_a['keys']} bytes={stats_a['bytes']}")
         return 0
 
     elif target == "b":
         if b is None:
             _die("Target 'b' specified but connection B not configured", code=2)
-        digest_b, stats_b = digest_db(b, options)
+        digest_b, stats_b = digest_db(b, options, label="B")
         print(f"B_DIGEST {digest_b.hex()} keys={stats_b['keys']} bytes={stats_b['bytes']}")
         return 0
 
@@ -468,8 +481,13 @@ def mode_digest(
         if a is None or b is None:
             _die("Target 'both' requires both A and B connections to be configured", code=2)
         
-        digest_a, stats_a = digest_db(a, options)
-        digest_b, stats_b = digest_db(b, options)
+        sys.stderr.write("Computing digest for database A...\n")
+        sys.stderr.flush()
+        digest_a, stats_a = digest_db(a, options, label="A")
+        
+        sys.stderr.write("Computing digest for database B...\n")
+        sys.stderr.flush()
+        digest_b, stats_b = digest_db(b, options, label="B")
 
         digest_a_hex = digest_a.hex()
         digest_b_hex = digest_b.hex()
