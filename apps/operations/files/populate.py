@@ -13,8 +13,13 @@ from typing import List, Sequence, Tuple
 
 # Expected environment variables (os.environ):
 # - REDISCLI_AUTH (required): Redis password (also used as Sentinel password in this repo)
+# - REDIS_URL (optional): Direct Redis connection URL (e.g., redis://host:port or redis://host:port/db)
+#   - If set, direct connection is used instead of Sentinel
+# - REDIS_HOST (optional): Redis host (used if REDIS_URL not set and for direct connection)
+# - REDIS_PORT (optional): Redis port (default: 6379, used with REDIS_HOST for direct connection)
 # - REDIS_SENTINELS (optional): comma-separated Sentinel endpoints "host:port"
 #   - default: redis-sentinel.sidekiq-sandbox.svc.cluster.local:26379
+#   - Used only if REDIS_URL and REDIS_HOST are not set
 # - REDIS_SENTINEL_MASTER_NAME (optional): Sentinel master name
 #   - default: cluster_name
 # - REDIS_DB (optional): Redis database index (int)
@@ -27,6 +32,7 @@ from typing import List, Sequence, Tuple
 # python populate.py <key_prefix> <key_count>
 
 try:
+    import redis
     from redis.exceptions import RedisError
     from redis.sentinel import Sentinel
 except Exception as e:  # pragma: no cover
@@ -122,37 +128,78 @@ def main(argv: Sequence[str]) -> int:
     if not password:
         _die("env var REDISCLI_AUTH must be set (used as Redis + Sentinel password)")
 
-    sentinel_hosts = os.environ.get(
-        "REDIS_SENTINELS",
-        "redis-sentinel.sidekiq-sandbox.svc.cluster.local:26379",
-    )
-    master_name = os.environ.get("REDIS_SENTINEL_MASTER_NAME", "cluster_name")
     db = int(os.environ.get("REDIS_DB", "0"))
     batch_size = int(os.environ.get("REDIS_PIPELINE_BATCH", "1000"))
     timeout_s = float(os.environ.get("REDIS_TIMEOUT_S", "3.0"))
 
-    sentinels = parse_sentinels(sentinel_hosts)
+    redis_url = os.environ.get("REDIS_URL", "")
+    redis_host = os.environ.get("REDIS_HOST", "")
+    redis_port = int(os.environ.get("REDIS_PORT", "6379"))
 
-    sentinel = Sentinel(
-        sentinels,
-        socket_timeout=timeout_s,
-        decode_responses=True,
-        sentinel_kwargs={"password": password, "socket_timeout": timeout_s, "decode_responses": True},
-    )
-
-    # Use sentinel-discovered master; auth with same password.
-    r = sentinel.master_for(
-        master_name,
-        password=password,
-        db=db,
-        socket_timeout=timeout_s,
-        decode_responses=True,
-    )
-
-    try:
-        r.ping()
-    except RedisError as e:
-        _die(f"failed to connect/ping Redis master via Sentinel ({master_name}): {e!r}", code=3)
+    # Connection mode selection:
+    # 1. REDIS_URL takes precedence (direct connection via URL)
+    # 2. REDIS_HOST uses direct connection with host:port
+    # 3. Otherwise use Sentinel (backward compatible)
+    
+    if redis_url:
+        # Direct connection via URL
+        try:
+            r = redis.from_url(
+                redis_url,
+                password=password,
+                db=db,
+                socket_timeout=timeout_s,
+                decode_responses=True,
+            )
+            r.ping()
+        except RedisError as e:
+            _die(f"failed to connect/ping Redis via URL ({redis_url}): {e!r}", code=3)
+        master_name = "direct"
+    elif redis_host:
+        # Direct connection via host:port
+        try:
+            r = redis.Redis(
+                host=redis_host,
+                port=redis_port,
+                password=password,
+                db=db,
+                socket_timeout=timeout_s,
+                decode_responses=True,
+            )
+            r.ping()
+        except RedisError as e:
+            _die(f"failed to connect/ping Redis at {redis_host}:{redis_port}: {e!r}", code=3)
+        master_name = "direct"
+    else:
+        # Sentinel connection (backward compatible)
+        sentinel_hosts = os.environ.get(
+            "REDIS_SENTINELS",
+            "redis-sentinel.sidekiq-sandbox.svc.cluster.local:26379",
+        )
+        master_name = os.environ.get("REDIS_SENTINEL_MASTER_NAME", "cluster_name")
+        
+        sentinels = parse_sentinels(sentinel_hosts)
+        
+        sentinel = Sentinel(
+            sentinels,
+            socket_timeout=timeout_s,
+            decode_responses=True,
+            sentinel_kwargs={"password": password, "socket_timeout": timeout_s, "decode_responses": True},
+        )
+        
+        # Use sentinel-discovered master; auth with same password.
+        r = sentinel.master_for(
+            master_name,
+            password=password,
+            db=db,
+            socket_timeout=timeout_s,
+            decode_responses=True,
+        )
+        
+        try:
+            r.ping()
+        except RedisError as e:
+            _die(f"failed to connect/ping Redis master via Sentinel ({master_name}): {e!r}", code=3)
 
     stats_before = collect_stats(r)
     t0 = time.time()
