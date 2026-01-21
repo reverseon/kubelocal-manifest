@@ -11,5 +11,3 @@ configMapGenerator:
   files:
   - files/populate.py
   - files/redis_compare.py
-  options:
-    disableNameSuffixHash: true
