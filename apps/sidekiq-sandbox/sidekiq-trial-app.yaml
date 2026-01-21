@@ -1,3 +1,27 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: elasticache-config
+  namespace: sidekiq-sandbox
+data:
+  USE_ELASTICACHE: "true"
+  USE_SENTINEL: "false"
+  ELASTICACHE_HOST: "redis-second.sidekiq-sandbox.svc.cluster.local"
+  ELASTICACHE_PORT: "6379"
+  REDIS_URL: "redis://redis-second.sidekiq-sandbox.svc.cluster.local:6379"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: sentinel-config
+  namespace: sidekiq-sandbox
+data:
+  USE_ELASTICACHE: "false"
+  USE_SENTINEL: "true"
+  REDIS_SENTINEL_HOST: "redis-sentinel.sidekiq-sandbox.svc.cluster.local"
+  REDIS_SENTINEL_PORT: "26379"
+  REDIS_URL: "redis://cluster_name:6379"
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -21,6 +45,9 @@ spec:
         - containerPort: 3000
           name: http
           protocol: TCP
+        envFrom:
+        - configMapRef:
+            name: sentinel-config
         env:
         - name: RAILS_ENV
           value: production
@@ -29,20 +56,11 @@ spec:
             secretKeyRef:
               name: sidekiq-secret
               key: SECRET_KEY_BASE
-        - name: USE_ELASTICACHE
-          value: "false"
-        - name: USE_SENTINEL
-          value: "true"
-        - name: ELASTICACHE_HOST
-          value: ""
-        - name: ELASTICACHE_PORT
-          value: ""
         - name: ELASTICACHE_PASSWORD
-          value: ""
-        - name: REDIS_SENTINEL_HOST
-          value: redis-sentinel.sidekiq-sandbox.svc.cluster.local
-        - name: REDIS_SENTINEL_PORT
-          value: "26379"
+          valueFrom:
+            secretKeyRef:
+              name: redis-password
+              key: password
         - name: REDIS_SENTINEL_PASSWORD
           valueFrom:
             secretKeyRef:
@@ -52,8 +70,6 @@ spec:
           value: redis.shared-app.svc.cluster.local
         - name: OUTPUT_CACHE_REDIS_PORT
           value: "6379"
-        - name: REDIS_URL
-          value: redis://cluster_name:6379
         readinessProbe:
           httpGet:
             path: /
@@ -128,6 +144,9 @@ spec:
         image: sidekiq-trial-app:latest
         imagePullPolicy: Never
         command: ["bundle", "exec", "sidekiq"]
+        envFrom:
+        - configMapRef:
+            name: sentinel-config
         env:
         - name: RAILS_ENV
           value: production
@@ -136,20 +155,11 @@ spec:
             secretKeyRef:
               name: sidekiq-secret
               key: SECRET_KEY_BASE
-        - name: USE_ELASTICACHE
-          value: "false"
-        - name: USE_SENTINEL
-          value: "true"
-        - name: ELASTICACHE_HOST
-          value: ""
-        - name: ELASTICACHE_PORT
-          value: ""
         - name: ELASTICACHE_PASSWORD
-          value: ""
-        - name: REDIS_SENTINEL_HOST
-          value: redis-sentinel.sidekiq-sandbox.svc.cluster.local
-        - name: REDIS_SENTINEL_PORT
-          value: "26379"
+          valueFrom:
+            secretKeyRef:
+              name: redis-password
+              key: password
         - name: REDIS_SENTINEL_PASSWORD
           valueFrom:
             secretKeyRef:
@@ -159,8 +169,6 @@ spec:
           value: redis.shared-app.svc.cluster.local
         - name: OUTPUT_CACHE_REDIS_PORT
           value: "6379"
-        - name: REDIS_URL
-          value: redis://cluster_name:6379
         resources:
           requests:
             cpu: 100m
