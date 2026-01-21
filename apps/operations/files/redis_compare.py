@@ -31,6 +31,8 @@ options:
   pipeline_batch: 1000
   allow_unsupported_types: false
   check_values: false
+  check_ttl: false
+  ttl_tolerance: 120  # Seconds of acceptable TTL difference
   progress_interval: 1000  # Report progress every N keys
 
 Usage:
@@ -46,6 +48,14 @@ python redis_compare.py --config /path/to/config.yaml digest --target b
 
 # Diff mode - compare keys between A and B
 python redis_compare.py --config /path/to/config.yaml diff
+
+Output Format (diff mode):
+---------------------------
+ONLY_IN_A <key>                    # Key exists only in database A
+ONLY_IN_B <key>                    # Key exists only in database B
+DIFF_VALUE <key> a=<hex> b=<hex>   # Key value differs (with check_values: true)
+DIFF_TTL <key> a=<ttl> b=<ttl>     # Key TTL differs (with check_ttl: true)
+                                   # TTL format: "no_expiry" or "NNNs" (seconds)
 """
 
 from __future__ import annotations
@@ -118,6 +128,8 @@ def load_config(
     options.setdefault("pipeline_batch", 1000)
     options.setdefault("allow_unsupported_types", False)
     options.setdefault("check_values", False)
+    options.setdefault("check_ttl", False)
+    options.setdefault("ttl_tolerance", 120)
     options.setdefault("progress_interval", 1000)
 
     return a_conf, b_conf, options
@@ -371,16 +383,20 @@ def diff_presence(
     """
     Compare keys between A and B.
     Print ONLY_IN_A and ONLY_IN_B lines.
-    If options.check_values is True, also print DIFF_VALUE for matching keys with different values.
+    If options.check_values is True, also print DIFF_VALUE with hex-encoded values from both databases.
+    If options.check_ttl is True, also print DIFF_TTL with TTL values from both databases.
     """
     scan_count = options["scan_count"]
     pipeline_batch = options["pipeline_batch"]
     check_values = options["check_values"]
+    check_ttl = options["check_ttl"]
+    ttl_tolerance = options["ttl_tolerance"]
     allow_unsupported = options["allow_unsupported_types"]
 
     only_in_a = []
     only_in_b = []
-    diff_values = []
+    diff_values = []  # List of (key, val_a, val_b)
+    diff_ttls = []  # List of (key, ttl_a, ttl_b)
 
     try:
         # Pass A -> B: find keys in A not in B
@@ -398,31 +414,56 @@ def diff_presence(
                 if not exists:
                     only_in_a.append(key)
 
-        # If check_values, compare values for keys in both
-        if check_values:
+        # If check_values or check_ttl, we need keys_in_both
+        if check_values or check_ttl:
             keys_in_both = [k for k in keys_a if k not in only_in_a]
-            for key in keys_in_both:
-                typ_a = a.type(key)
-                typ_b = b.type(key)
-                
-                if typ_a != typ_b:
-                    diff_values.append(key)
-                    continue
-                
-                try:
-                    val_a = canonical_value_bytes(a, key, typ_a, allow_unsupported)
-                    val_b = canonical_value_bytes(b, key, typ_b, allow_unsupported)
+            
+            # Check values
+            if check_values:
+                for key in keys_in_both:
+                    typ_a = a.type(key)
+                    typ_b = b.type(key)
                     
-                    if val_a != val_b:
-                        diff_values.append(key)
-                except ValueError:
-                    # Unsupported type
-                    if not allow_unsupported:
-                        _die(
-                            f"Encountered unsupported type '{typ_a}' for key '{key}' during value check. "
-                            f"Set options.allow_unsupported_types=true to skip.",
-                            code=4,
-                        )
+                    if typ_a != typ_b:
+                        # Store type mismatch info
+                        diff_values.append((key, f"type:{typ_a}", f"type:{typ_b}"))
+                        continue
+                    
+                    try:
+                        val_a = canonical_value_bytes(a, key, typ_a, allow_unsupported)
+                        val_b = canonical_value_bytes(b, key, typ_b, allow_unsupported)
+                        
+                        if val_a != val_b:
+                            # Store actual values (hex for binary safety)
+                            diff_values.append((key, val_a.hex(), val_b.hex()))
+                    except ValueError:
+                        # Unsupported type
+                        if not allow_unsupported:
+                            _die(
+                                f"Encountered unsupported type '{typ_a}' for key '{key}' during value check. "
+                                f"Set options.allow_unsupported_types=true to skip.",
+                                code=4,
+                            )
+            
+            # Check TTL
+            if check_ttl:
+                for key in keys_in_both:
+                    ttl_a = a.ttl(key)
+                    ttl_b = b.ttl(key)
+                    
+                    # TTL returns -1 for keys with no expiry, -2 for keys that don't exist
+                    # Compare TTLs based on their states
+                    if ttl_a == -1 and ttl_b == -1:
+                        # Both have no expiry - match
+                        continue
+                    elif ttl_a == -1 or ttl_b == -1:
+                        # One has expiry, one doesn't - mismatch
+                        diff_ttls.append((key, ttl_a, ttl_b))
+                    elif ttl_a >= 0 and ttl_b >= 0:
+                        # Both have expiry - check tolerance
+                        if abs(ttl_a - ttl_b) > ttl_tolerance:
+                            diff_ttls.append((key, ttl_a, ttl_b))
+                    # If either is -2 (doesn't exist), skip (shouldn't happen as we checked existence)
 
         # Pass B -> A: find keys in B not in A
         keys_b = list(iter_keys(b, scan_count))
@@ -449,8 +490,15 @@ def diff_presence(
         print(f"ONLY_IN_B {key}")
     
     if check_values:
-        for key in diff_values:
-            print(f"DIFF_VALUE {key}")
+        for key, val_a, val_b in diff_values:
+            print(f"DIFF_VALUE {key} a={val_a} b={val_b}")
+    
+    if check_ttl:
+        for key, ttl_a, ttl_b in diff_ttls:
+            # Format TTL values: -1 means no expiry, >= 0 is seconds
+            ttl_a_str = "no_expiry" if ttl_a == -1 else f"{ttl_a}s"
+            ttl_b_str = "no_expiry" if ttl_b == -1 else f"{ttl_b}s"
+            print(f"DIFF_TTL {key} a={ttl_a_str} b={ttl_b_str}")
 
 
 def mode_digest(
