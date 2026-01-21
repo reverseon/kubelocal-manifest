@@ -245,6 +245,7 @@ def main(argv: List[str]) -> int:
     skipped = 0
     mutated_values = 0
     mutated_ttls = 0
+    deleted_keys = 0
     
     try:
         cursor = 0
@@ -254,15 +255,16 @@ def main(argv: List[str]) -> int:
             for key in keys:
                 processed += 1
                 
-                # 50% chance: do nothing
+                # 40% chance: do nothing
                 # 25% chance: mutate value
                 # 25% chance: mutate TTL
+                # 10% chance: delete key
                 action = random.random()
                 
-                if action < 0.50:
+                if action < 0.40:
                     # Do nothing
                     skipped += 1
-                elif action < 0.75:
+                elif action < 0.65:
                     # Mutate value
                     try:
                         typ = r.type(key)
@@ -270,19 +272,26 @@ def main(argv: List[str]) -> int:
                         mutated_values += 1
                     except RedisError as e:
                         print(f"Warning: failed to mutate value for key '{key}': {e!r}", file=sys.stderr)
-                else:
+                elif action < 0.90:
                     # Mutate TTL
                     try:
                         mutate_ttl(r, key)
                         mutated_ttls += 1
                     except RedisError as e:
                         print(f"Warning: failed to mutate TTL for key '{key}': {e!r}", file=sys.stderr)
+                else:
+                    # Delete key
+                    try:
+                        r.delete(key)
+                        deleted_keys += 1
+                    except RedisError as e:
+                        print(f"Warning: failed to delete key '{key}': {e!r}", file=sys.stderr)
                 
                 # Progress reporting every 1000 keys
                 if processed % 1000 == 0:
                     print(
                         f"Progress: processed {processed} keys "
-                        f"(skipped={skipped}, value_mutations={mutated_values}, ttl_mutations={mutated_ttls})",
+                        f"(skipped={skipped}, value_mutations={mutated_values}, ttl_mutations={mutated_ttls}, deletions={deleted_keys})",
                         file=sys.stderr,
                         flush=True,
                     )
@@ -299,7 +308,8 @@ def main(argv: List[str]) -> int:
         f"\nDone: processed {processed} keys in {dt:.2f}s (db={db}, master_name={master_name})\n"
         f"  Skipped (no change): {skipped} ({100*skipped/processed:.1f}%)\n"
         f"  Value mutations: {mutated_values} ({100*mutated_values/processed:.1f}%)\n"
-        f"  TTL mutations: {mutated_ttls} ({100*mutated_ttls/processed:.1f}%)",
+        f"  TTL mutations: {mutated_ttls} ({100*mutated_ttls/processed:.1f}%)\n"
+        f"  Deletions: {deleted_keys} ({100*deleted_keys/processed:.1f}%)",
         file=sys.stderr,
         flush=True,
     )
