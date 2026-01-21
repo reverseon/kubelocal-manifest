@@ -238,6 +238,9 @@ def main(argv: Sequence[str]) -> int:
                 separators=(",", ":"),
             )
             pipe.set(key, value)
+            # Randomly set TTL: 50% chance of TTL between 7200-14400 seconds
+            if random.choice([True, False]):
+                pipe.expire(key, random.randint(7200, 14400))
             written += 1
 
             if written % batch_size == 0:
@@ -255,6 +258,9 @@ def main(argv: Sequence[str]) -> int:
                 "rand": str(random.randint(0, 1_000_000_000)),
             }
             pipe.hset(key, mapping=mapping)
+            # Randomly set TTL: 50% chance of TTL between 7200-14400 seconds
+            if random.choice([True, False]):
+                pipe.expire(key, random.randint(7200, 14400))
             written += 1
 
             if written % batch_size == 0:
@@ -272,6 +278,9 @@ def main(argv: Sequence[str]) -> int:
                 for _ in range(3)
             ]
             pipe.rpush(key, *items)
+            # Randomly set TTL: 50% chance of TTL between 7200-14400 seconds
+            if random.choice([True, False]):
+                pipe.expire(key, random.randint(7200, 14400))
             written += 1
 
             if written % batch_size == 0:
