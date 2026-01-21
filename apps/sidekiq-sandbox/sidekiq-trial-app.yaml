@@ -53,7 +53,7 @@ spec:
         - name: OUTPUT_CACHE_REDIS_PORT
           value: "6379"
         - name: REDIS_URL
-          value: redis://mymaster:6379
+          value: redis://cluster_name:6379
         readinessProbe:
           httpGet:
             path: /
@@ -160,7 +160,7 @@ spec:
         - name: OUTPUT_CACHE_REDIS_PORT
           value: "6379"
         - name: REDIS_URL
-          value: redis://mymaster:6379
+          value: redis://cluster_name:6379
         resources:
           requests:
             cpu: 100m
