@@ -3,6 +3,10 @@
 """
 redis_compare.py - Compare Redis databases via digest or diff modes
 
+Dependencies:
+-------------
+pip install redis pyyaml
+
 YAML Config Example:
 --------------------
 # Connection A (required for diff mode and digest --target a/both)
