@@ -521,7 +521,7 @@ def diff_presence(
     if check_ttl and diff_ttls:
         has_output = True
         print("\n" + "=" * 80)
-        print("TTL DIFFERENCES")
+        print(f"TTL DIFFERENCES (tolerance: ±{ttl_tolerance}s)")
         print("=" * 80)
         print(f"{'Key':<50} {'TTL in A':<14} {'TTL in B':<14}")
         print("-" * 80)
