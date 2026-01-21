@@ -11,3 +11,4 @@ configMapGenerator:
   files:
   - files/populate.py
   - files/redis_compare.py
+  - files/mutate.py
