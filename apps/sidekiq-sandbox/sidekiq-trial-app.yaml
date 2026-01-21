@@ -47,7 +47,7 @@ spec:
           protocol: TCP
         envFrom:
         - configMapRef:
-            name: sentinel-config
+            name: elasticache-config
         env:
         - name: RAILS_ENV
           value: production
