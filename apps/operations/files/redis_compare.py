@@ -482,23 +482,57 @@ def diff_presence(
     except RedisError as e:
         _die(f"Redis error during diff: {e!r}", code=4)
 
-    # Print results
-    for key in only_in_a:
-        print(f"ONLY_IN_A {key}")
+    # Print results in table format
+    has_output = False
     
-    for key in only_in_b:
-        print(f"ONLY_IN_B {key}")
+    if only_in_a:
+        has_output = True
+        print("\n" + "=" * 80)
+        print("KEYS ONLY IN DATABASE A")
+        print("=" * 80)
+        print(f"{'Key':<78}")
+        print("-" * 80)
+        for key in only_in_a:
+            print(f"{key:<78}")
     
-    if check_values:
+    if only_in_b:
+        has_output = True
+        print("\n" + "=" * 80)
+        print("KEYS ONLY IN DATABASE B")
+        print("=" * 80)
+        print(f"{'Key':<78}")
+        print("-" * 80)
+        for key in only_in_b:
+            print(f"{key:<78}")
+    
+    if check_values and diff_values:
+        has_output = True
+        print("\n" + "=" * 80)
+        print("VALUE DIFFERENCES")
+        print("=" * 80)
+        print(f"{'Key':<30} {'Value in A':<24} {'Value in B':<24}")
+        print("-" * 80)
         for key, val_a, val_b in diff_values:
-            print(f"DIFF_VALUE {key} a={val_a} b={val_b}")
+            # Truncate long values for display
+            val_a_display = val_a[:22] + ".." if len(val_a) > 24 else val_a
+            val_b_display = val_b[:22] + ".." if len(val_b) > 24 else val_b
+            print(f"{key:<30} {val_a_display:<24} {val_b_display:<24}")
     
-    if check_ttl:
+    if check_ttl and diff_ttls:
+        has_output = True
+        print("\n" + "=" * 80)
+        print("TTL DIFFERENCES")
+        print("=" * 80)
+        print(f"{'Key':<50} {'TTL in A':<14} {'TTL in B':<14}")
+        print("-" * 80)
         for key, ttl_a, ttl_b in diff_ttls:
             # Format TTL values: -1 means no expiry, >= 0 is seconds
             ttl_a_str = "no_expiry" if ttl_a == -1 else f"{ttl_a}s"
             ttl_b_str = "no_expiry" if ttl_b == -1 else f"{ttl_b}s"
-            print(f"DIFF_TTL {key} a={ttl_a_str} b={ttl_b_str}")
+            print(f"{key:<50} {ttl_a_str:<14} {ttl_b_str:<14}")
+    
+    if has_output:
+        print("\n" + "=" * 80)
 
 
 def mode_digest(
