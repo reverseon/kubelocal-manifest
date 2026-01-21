@@ -396,6 +396,7 @@ def diff_presence(
     check_ttl = options["check_ttl"]
     ttl_tolerance = options["ttl_tolerance"]
     allow_unsupported = options["allow_unsupported_types"]
+    progress_interval = options.get("progress_interval", 1000)
 
     only_in_a = []
     only_in_b = []
@@ -404,10 +405,27 @@ def diff_presence(
 
     try:
         # Pass A -> B: find keys in A not in B
-        keys_a = list(iter_keys(a, scan_count))
+        sys.stderr.write("Scanning keys in database A...\n")
+        sys.stderr.flush()
+        keys_a = []
+        scanned_a = 0
+        for key in iter_keys(a, scan_count):
+            keys_a.append(key)
+            scanned_a += 1
+            if scanned_a % progress_interval == 0:
+                sys.stderr.write(f"[A] Scanned {scanned_a} keys\n")
+                sys.stderr.flush()
+        
+        sys.stderr.write(f"[A] Total keys: {len(keys_a)}\n")
+        sys.stderr.write("Checking existence in database B...\n")
+        sys.stderr.flush()
         
         # Batch EXISTS checks
         for i in range(0, len(keys_a), pipeline_batch):
+            if i > 0 and i % (progress_interval * 10) == 0:
+                sys.stderr.write(f"[A→B] Checked {i}/{len(keys_a)} keys for existence\n")
+                sys.stderr.flush()
+            
             batch = keys_a[i : i + pipeline_batch]
             pipe = b.pipeline(transaction=False)
             for key in batch:
@@ -417,14 +435,26 @@ def diff_presence(
             for key, exists in zip(batch, results):
                 if not exists:
                     only_in_a.append(key)
+        
+        sys.stderr.write(f"[A→B] Completed existence check for {len(keys_a)} keys\n")
+        sys.stderr.flush()
 
         # If check_values or check_ttl, we need keys_in_both
         if check_values or check_ttl:
             keys_in_both = [k for k in keys_a if k not in only_in_a]
+            sys.stderr.write(f"Keys in both databases: {len(keys_in_both)}\n")
+            sys.stderr.flush()
             
             # Check values
             if check_values:
+                sys.stderr.write("Checking value differences...\n")
+                sys.stderr.flush()
+                checked_values = 0
                 for key in keys_in_both:
+                    checked_values += 1
+                    if checked_values % progress_interval == 0:
+                        sys.stderr.write(f"[VALUES] Checked {checked_values}/{len(keys_in_both)} keys\n")
+                        sys.stderr.flush()
                     typ_a = a.type(key)
                     typ_b = b.type(key)
                     
@@ -448,10 +478,20 @@ def diff_presence(
                                 f"Set options.allow_unsupported_types=true to skip.",
                                 code=4,
                             )
+                
+                sys.stderr.write(f"[VALUES] Completed checking {len(keys_in_both)} keys\n")
+                sys.stderr.flush()
             
             # Check TTL
             if check_ttl:
+                sys.stderr.write("Checking TTL differences...\n")
+                sys.stderr.flush()
+                checked_ttl = 0
                 for key in keys_in_both:
+                    checked_ttl += 1
+                    if checked_ttl % progress_interval == 0:
+                        sys.stderr.write(f"[TTL] Checked {checked_ttl}/{len(keys_in_both)} keys\n")
+                        sys.stderr.flush()
                     ttl_a = a.ttl(key)
                     ttl_b = b.ttl(key)
                     
@@ -468,11 +508,31 @@ def diff_presence(
                         if abs(ttl_a - ttl_b) > ttl_tolerance:
                             diff_ttls.append((key, ttl_a, ttl_b))
                     # If either is -2 (doesn't exist), skip (shouldn't happen as we checked existence)
+                
+                sys.stderr.write(f"[TTL] Completed checking {len(keys_in_both)} keys\n")
+                sys.stderr.flush()
 
         # Pass B -> A: find keys in B not in A
-        keys_b = list(iter_keys(b, scan_count))
+        sys.stderr.write("Scanning keys in database B...\n")
+        sys.stderr.flush()
+        keys_b = []
+        scanned_b = 0
+        for key in iter_keys(b, scan_count):
+            keys_b.append(key)
+            scanned_b += 1
+            if scanned_b % progress_interval == 0:
+                sys.stderr.write(f"[B] Scanned {scanned_b} keys\n")
+                sys.stderr.flush()
+        
+        sys.stderr.write(f"[B] Total keys: {len(keys_b)}\n")
+        sys.stderr.write("Checking existence in database A...\n")
+        sys.stderr.flush()
         
         for i in range(0, len(keys_b), pipeline_batch):
+            if i > 0 and i % (progress_interval * 10) == 0:
+                sys.stderr.write(f"[B→A] Checked {i}/{len(keys_b)} keys for existence\n")
+                sys.stderr.flush()
+            
             batch = keys_b[i : i + pipeline_batch]
             pipe = a.pipeline(transaction=False)
             for key in batch:
@@ -482,6 +542,10 @@ def diff_presence(
             for key, exists in zip(batch, results):
                 if not exists:
                     only_in_b.append(key)
+        
+        sys.stderr.write(f"[B→A] Completed existence check for {len(keys_b)} keys\n")
+        sys.stderr.write("Comparison complete.\n")
+        sys.stderr.flush()
 
     except RedisError as e:
         _die(f"Redis error during diff: {e!r}", code=4)
