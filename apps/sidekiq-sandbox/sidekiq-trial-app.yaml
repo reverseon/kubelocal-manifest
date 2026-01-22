@@ -139,12 +139,12 @@ spec:
       labels:
         app: sidekiq-worker
     spec:
-      terminationGracePeriodSeconds: 1
+      terminationGracePeriodSeconds: 10
       containers:
       - name: sidekiq
         image: sidekiq-trial-app:latest
         imagePullPolicy: Never
-        command: ["bundle", "exec", "sidekiq"]
+        command: ["bundle", "exec", "sidekiq", "-c", "2", "-t", "5"]
         envFrom:
         - configMapRef:
             name: sentinel-config #SWITCH
