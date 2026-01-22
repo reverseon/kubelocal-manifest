@@ -47,7 +47,7 @@ spec:
           protocol: TCP
         envFrom:
         - configMapRef:
-            name: elasticache-config #SWITCH
+            name: sentinel-config #SWITCH
         env:
         - name: RAILS_ENV
           value: production
@@ -139,6 +139,7 @@ spec:
       labels:
         app: sidekiq-worker
     spec:
+      terminationGracePeriodSeconds: 1
       containers:
       - name: sidekiq
         image: sidekiq-trial-app:latest
@@ -146,7 +147,7 @@ spec:
         command: ["bundle", "exec", "sidekiq"]
         envFrom:
         - configMapRef:
-            name: elasticache-config #SWITCH
+            name: sentinel-config #SWITCH
         env:
         - name: RAILS_ENV
           value: production
