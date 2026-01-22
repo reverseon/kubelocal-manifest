@@ -47,7 +47,7 @@ spec:
           protocol: TCP
         envFrom:
         - configMapRef:
-            name: sentinel-config #SWITCH
+            name: elasticache-config #SWITCH
         env:
         - name: RAILS_ENV
           value: production
@@ -147,7 +147,7 @@ spec:
         command: ["bundle", "exec", "sidekiq", "-c", "2", "-t", "5"]
         envFrom:
         - configMapRef:
-            name: sentinel-config #SWITCH
+            name: elasticache-config #SWITCH
         env:
         - name: RAILS_ENV
           value: production
