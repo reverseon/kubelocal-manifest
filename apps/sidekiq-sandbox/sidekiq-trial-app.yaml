@@ -147,7 +147,7 @@ spec:
         command: ["bundle", "exec", "sidekiq", "-c", "2"]
         envFrom:
         - configMapRef:
-            name: sidekiq-config #SWITCH
+            name: sentinel-config #SWITCH
         env:
         - name: RAILS_ENV
           value: production
