@@ -1,0 +1,52 @@
+authentik:
+  secret_key: "changeme-please-generate-a-50-char-secret-key"
+  error_reporting:
+    enabled: false
+  postgresql:
+    host: postgresql.shared-app.svc.cluster.local
+    port: 5432
+    name: authentik
+    user: shared_user
+    password: file:///secrets/postgres-password/password
+
+server:
+  replicas: 1
+  ingress:
+    enabled: true
+    ingressClassName: nginx
+    annotations:
+      cert-manager.io/cluster-issuer: ishiori-local-general-issuer
+      cert-manager.io/common-name: authentik.kube.ishiori.lnet
+      nginx.ingress.kubernetes.io/backend-protocol: HTTP
+      nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    hosts:
+      - authentik.kube.ishiori.lnet
+    paths:
+      - /
+    pathType: Prefix
+    tls:
+      - hosts:
+          - authentik.kube.ishiori.lnet
+        secretName: authentik-server-tls
+  volumes:
+    - name: postgres-password
+      secret:
+        secretName: global-password
+  volumeMounts:
+    - name: postgres-password
+      mountPath: /secrets/postgres-password
+      readOnly: true
+
+worker:
+  replicas: 1
+  volumes:
+    - name: postgres-password
+      secret:
+        secretName: global-password
+  volumeMounts:
+    - name: postgres-password
+      mountPath: /secrets/postgres-password
+      readOnly: true
+
+postgresql:
+  enabled: false

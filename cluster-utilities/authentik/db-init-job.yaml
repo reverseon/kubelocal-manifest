@@ -1,0 +1,35 @@
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: authentik-db-init
+  namespace: shared-app
+  annotations:
+    argocd.argoproj.io/hook: PreSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+spec:
+  template:
+    spec:
+      restartPolicy: OnFailure
+      containers:
+      - name: db-init
+        image: postgres:16-alpine
+        command:
+        - /bin/sh
+        - -c
+        - |
+          export PGPASSWORD="$POSTGRES_PASSWORD"
+          # Check if database exists, create if not
+          if ! psql -h postgresql.shared-app.svc.cluster.local -U shared_user -d shared_db -lqt | cut -d \| -f 1 | grep -qw authentik; then
+            echo "Creating authentik database..."
+            psql -h postgresql.shared-app.svc.cluster.local -U shared_user -d shared_db -c "CREATE DATABASE authentik;"
+            echo "Database created successfully"
+          else
+            echo "Database authentik already exists"
+          fi
+        env:
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: global-password
+              key: password

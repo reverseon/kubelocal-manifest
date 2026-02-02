@@ -19,6 +19,7 @@ spec:
         - path: "cluster-utilities/cluster-scoped"
         - path: "cluster-utilities/cluster-registry"
         - path: "cluster-utilities/shared-app"
+        - path: "cluster-utilities/authentik"
         - path: "apps/operations"
         - path: "apps/workflows-sandbox"
         - path: "apps/sidekiq-sandbox"
