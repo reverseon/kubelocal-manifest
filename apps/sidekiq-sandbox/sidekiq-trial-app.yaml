@@ -29,6 +29,7 @@ metadata:
   namespace: sidekiq-sandbox
 spec:
   replicas: 1
+  revisionHistoryLimit: 2
   selector:
     matchLabels:
       app: sidekiq-trial-app
@@ -131,6 +132,7 @@ metadata:
   namespace: sidekiq-sandbox
 spec:
   replicas: 1
+  revisionHistoryLimit: 2
   selector:
     matchLabels:
       app: sidekiq-worker

@@ -36,6 +36,7 @@ metadata:
 spec:
   serviceName: redis
   replicas: 3
+  revisionHistoryLimit: 2
   selector:
     matchLabels:
       app: redis
@@ -181,6 +182,7 @@ metadata:
 spec:
   serviceName: redis-sentinel
   replicas: 3
+  revisionHistoryLimit: 2
   selector:
     matchLabels:
       app: redis-sentinel
