@@ -12,6 +12,7 @@ spec:
       directories:
         - path: "cluster-utilities/cert-manager"
         - path: "cluster-utilities/sealed-secrets"
+        - path: "cluster-utilities/reflector"
         - path: "cluster-utilities/ingress-nginx"
         - path: "cluster-utilities/k8s-dashboard"
         - path: "cluster-utilities/argo-rollouts"
