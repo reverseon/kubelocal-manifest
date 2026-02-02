@@ -23,6 +23,7 @@ spec:
         - path: "apps/operations"
         - path: "apps/workflows-sandbox"
         - path: "apps/sidekiq-sandbox"
+        - path: "apps/oauth-sandbox"
         - path: "apps/rollouts-sandbox"
   template:
     metadata:
