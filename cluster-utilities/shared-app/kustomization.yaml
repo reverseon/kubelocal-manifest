@@ -3,4 +3,6 @@ kind: Kustomization
 namespace: shared-app
 resources:
 - namespace.yaml
+- global-pwd.yaml
 - redis.yaml
+- postgresql.yaml

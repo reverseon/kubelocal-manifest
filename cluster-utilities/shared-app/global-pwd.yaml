@@ -1,0 +1,13 @@
+---
+apiVersion: bitnami.com/v1alpha1
+kind: SealedSecret
+metadata:
+  name: global-password
+  namespace: shared-app
+spec:
+  encryptedData:
+    password: AgCDGy5cmFtm/taKEkvGeUkf3Gzo6tQQJX4fEnWScyQKcXkyn5K774Ey1BVD+U96sdajrZTLnbsBz0u7FCS2gDZkHruEyKv/4xmio23/jXYyNG1oxe+vhrGb0GF+gF9bFBJ1QMYtz4sDqTkZaPc8J0Rw/RiysGiCUJVMNiEgXYrDqTOaMDwE1s1wrcJCR8S11fA30HSm7339HUYhnCicvEBEfM7gfUCFU1GMA0bDbhiFi6uzogFhgP1uL5d7/JA34BuZOXOZSEx/uwLcp+f0B4XjfhhoxZxVIKR0hOM9g7qJOmywzxEWQvCZCUs1mcy3m8pepnV0wayCFlqfYxLuIARObKJiVf0Nxz7x5N4BJQcndA4DyHnuFUvGItLU1BZpVxms52KMvC+59Umsu6ueJZjCiEbOUw9HVCcIlHQTchyprxkDmRxIJmAvgEMSsaVdK76nxrvUOnKR63u+Oe1rFxyzzr0vaO5pv1PyOsHMlfF9BkI+Z2CfGpp+V7o59mYGxAeptObmvYCSq/VzgSTrD19mWA8mYSBwjS/3UUIpujduKacqjJP4a7Kz1u+E5Lkx4yP76mKlfi0sxMB+U1YaJn2uoKrlNElICD+5me0GaH0jW+Xt7WxnGpfff3sbPcO4H/vuLZQ/J9Rtm4cdMLEoocsKuj2SV3Yno2jz2i6BCUXFD+X+uZsFXkJtTDeKZLyViVW+JpD5L+ybJgQFwQ==
+  template:
+    metadata:
+      name: global-password
+      namespace: shared-app
