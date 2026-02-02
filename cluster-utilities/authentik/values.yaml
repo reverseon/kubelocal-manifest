@@ -1,5 +1,5 @@
 authentik:
-  secret_key: "changeme-please-generate-a-50-char-secret-key"
+  secret_key: file:///secrets/authentik-secret-key/secret_key
   error_reporting:
     enabled: false
   postgresql:
@@ -32,9 +32,15 @@ server:
     - name: postgres-password
       secret:
         secretName: global-password
+    - name: authentik-secret-key
+      secret:
+        secretName: authentik-secret-key
   volumeMounts:
     - name: postgres-password
       mountPath: /secrets/postgres-password
+      readOnly: true
+    - name: authentik-secret-key
+      mountPath: /secrets/authentik-secret-key
       readOnly: true
 
 worker:
@@ -43,9 +49,15 @@ worker:
     - name: postgres-password
       secret:
         secretName: global-password
+    - name: authentik-secret-key
+      secret:
+        secretName: authentik-secret-key
   volumeMounts:
     - name: postgres-password
       mountPath: /secrets/postgres-password
+      readOnly: true
+    - name: authentik-secret-key
+      mountPath: /secrets/authentik-secret-key
       readOnly: true
 
 postgresql:

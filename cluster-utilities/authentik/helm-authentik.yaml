@@ -44,7 +44,7 @@ data:
   AUTHENTIK_POSTGRESQL__PASSWORD: "ZmlsZTovLy9zZWNyZXRzL3Bvc3RncmVzLXBhc3N3b3JkL3Bhc3N3b3Jk"
   AUTHENTIK_POSTGRESQL__PORT: "NTQzMg=="
   AUTHENTIK_POSTGRESQL__USER: "c2hhcmVkX3VzZXI="
-  AUTHENTIK_SECRET_KEY: "Y2hhbmdlbWUtcGxlYXNlLWdlbmVyYXRlLWEtNTAtY2hhci1zZWNyZXQta2V5"
+  AUTHENTIK_SECRET_KEY: "ZmlsZTovLy9zZWNyZXRzL2F1dGhlbnRpay1zZWNyZXQta2V5L3NlY3JldF9rZXk="
   AUTHENTIK_WEB__PATH: "Lw=="
 ---
 # Source: authentik/charts/serviceAccount/templates/clusterrole.yaml
@@ -259,7 +259,7 @@ spec:
         app.kubernetes.io/part-of: "authentik"
         app.kubernetes.io/version: "2025.12.1"
       annotations:
-        checksum/secret: 3ca160c50caf6acdce7ae2ceb1bc7918a5e6a15e82cd4666557784d85258c5af
+        checksum/secret: 533fc19923d04e8efc9492a91cd8068d501d1ab65fc598744a42de02b4d851d5
     spec:
       terminationGracePeriodSeconds: 30
       containers:
@@ -281,6 +281,9 @@ spec:
           volumeMounts:
             - mountPath: /secrets/postgres-password
               name: postgres-password
+              readOnly: true
+            - mountPath: /secrets/authentik-secret-key
+              name: authentik-secret-key
               readOnly: true
           ports:
             - name: http
@@ -339,6 +342,9 @@ spec:
         - name: postgres-password
           secret:
             secretName: global-password
+        - name: authentik-secret-key
+          secret:
+            secretName: authentik-secret-key
       enableServiceLinks: true
 ---
 # Source: authentik/templates/worker/deployment.yaml
@@ -374,7 +380,7 @@ spec:
         app.kubernetes.io/part-of: "authentik"
         app.kubernetes.io/version: "2025.12.1"
       annotations:
-        checksum/secret: 3ca160c50caf6acdce7ae2ceb1bc7918a5e6a15e82cd4666557784d85258c5af
+        checksum/secret: 533fc19923d04e8efc9492a91cd8068d501d1ab65fc598744a42de02b4d851d5
     spec:
       serviceAccountName: authentik
       terminationGracePeriodSeconds: 30
@@ -395,6 +401,9 @@ spec:
           volumeMounts:
             - mountPath: /secrets/postgres-password
               name: postgres-password
+              readOnly: true
+            - mountPath: /secrets/authentik-secret-key
+              name: authentik-secret-key
               readOnly: true
           ports:
             - name: http
@@ -453,6 +462,9 @@ spec:
         - name: postgres-password
           secret:
             secretName: global-password
+        - name: authentik-secret-key
+          secret:
+            secretName: authentik-secret-key
       enableServiceLinks: true
 ---
 # Source: authentik/templates/server/ingress.yaml

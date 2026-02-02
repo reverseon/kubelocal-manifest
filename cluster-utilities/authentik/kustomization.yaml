@@ -4,3 +4,4 @@ resources:
 - helm-authentik.yaml
 - namespace.yaml
 - db-init-job.yaml
+- secret-key.yaml
