@@ -5,10 +5,14 @@ metadata:
   namespace: oauth-sandbox
 data:
   OAUTH_CLIENT_ID: "LMYXFzL4kUidstdyBrukWtWVozc7y8yR2TlnmRkr"
-  OAUTH_SITE: "https://authentik.kube.ishiori.lnet"
+  OPENID_CONFIGURATION_URL: "https://authentik.kube.ishiori.lnet/application/o/rails-session-login-test/.well-known/openid-configuration"
+  OAUTH_ISSUER: "https://authentik.kube.ishiori.lnet/application/o/rails-session-login-test/"
+  OAUTH_SITE: "https://authentik.kube.ishiori.lnet/application/o/rails-session-login-test/"
   OAUTH_AUTHORIZE_URL: "https://authentik.kube.ishiori.lnet/application/o/authorize/"
   OAUTH_TOKEN_URL: "https://authentik.kube.ishiori.lnet/application/o/token/"
   OAUTH_USER_INFO_URL: "https://authentik.kube.ishiori.lnet/application/o/userinfo/"
+  OAUTH_LOGOUT_URL: "https://authentik.kube.ishiori.lnet/application/o/rails-session-login-test/end-session/"
+  OAUTH_JWKS_URL: "https://authentik.kube.ishiori.lnet/application/o/rails-session-login-test/jwks/"
   USE_SENTINEL: "true"
   REDIS_SENTINEL_HOST: "redis-sentinel.oauth-sandbox.svc.cluster.local"
   REDIS_SENTINEL_PORT: "26379"
