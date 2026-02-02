@@ -49,6 +49,11 @@ spec:
         - configMapRef:
             name: oauth-config
         env:
+        - name: SECRET_KEY_BASE
+          valueFrom:
+            secretKeyRef:
+              name: oauth-secret-key-base
+              key: SECRET_KEY_BASE
         - name: OAUTH_CLIENT_SECRET
           valueFrom:
             secretKeyRef:
