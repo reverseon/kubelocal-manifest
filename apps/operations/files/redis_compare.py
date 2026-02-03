@@ -269,16 +269,14 @@ def iter_keys(r: redis.Redis, scan_count: int) -> Iterator[str]:
             break
 
 
-def canonical_value_bytes(r: redis.Redis, key: str, typ: str, allow_unsupported: bool) -> bytes:
+def _canonical_value_bytes_from_data(val: Any, typ: str) -> bytes:
     """
-    Return a canonical byte representation of the Redis value.
-    Raises ValueError for unsupported types unless allow_unsupported is True.
+    Convert already-fetched Redis data to canonical byte representation.
+    Used for pipelined batch operations.
     """
     if typ == "string":
-        val = r.get(key)
         if val is None:
             return b""
-        # redis-py with decode_responses=True returns str; False returns bytes.
         if isinstance(val, str):
             return val.encode("utf-8")
         if isinstance(val, (bytes, bytearray, memoryview)):
@@ -286,11 +284,8 @@ def canonical_value_bytes(r: redis.Redis, key: str, typ: str, allow_unsupported:
         return bytes(val)
 
     elif typ == "hash":
-        # HGETALL returns dict
-        val = r.hgetall(key)
         if not val:
             return b""
-        # Sort by field name for determinism
         items = sorted(val.items())
         parts = []
         for field, value in items:
@@ -302,7 +297,6 @@ def canonical_value_bytes(r: redis.Redis, key: str, typ: str, allow_unsupported:
         return b"\0".join(parts)
 
     elif typ == "list":
-        val = r.lrange(key, 0, -1)
         if not val:
             return b""
         parts = []
@@ -313,10 +307,8 @@ def canonical_value_bytes(r: redis.Redis, key: str, typ: str, allow_unsupported:
         return b"\0".join(parts)
 
     elif typ == "set":
-        val = r.smembers(key)
         if not val:
             return b""
-        # Sort members for determinism
         members = sorted(val)
         parts = []
         for member in members:
@@ -326,23 +318,41 @@ def canonical_value_bytes(r: redis.Redis, key: str, typ: str, allow_unsupported:
         return b"\0".join(parts)
 
     elif typ == "zset":
-        # ZRANGE with WITHSCORES returns list of (member, score) tuples
-        val = r.zrange(key, 0, -1, withscores=True)
         if not val:
             return b""
         parts = []
         for member, score in val:
             if isinstance(member, str):
                 member = member.encode("utf-8")
-            # Normalize score representation
             score_str = f"{score:{FLOAT_SCORE_FORMAT}}".encode("utf-8")
             parts.append(member + b"\0" + score_str)
         return b"\0".join(parts)
 
     else:
+        raise ValueError(f"Unsupported Redis type: {typ!r}")
+
+
+def canonical_value_bytes(r: redis.Redis, key: str, typ: str, allow_unsupported: bool) -> bytes:
+    """
+    Return a canonical byte representation of the Redis value.
+    Raises ValueError for unsupported types unless allow_unsupported is True.
+    """
+    if typ == "string":
+        val = r.get(key)
+    elif typ == "hash":
+        val = r.hgetall(key)
+    elif typ == "list":
+        val = r.lrange(key, 0, -1)
+    elif typ == "set":
+        val = r.smembers(key)
+    elif typ == "zset":
+        val = r.zrange(key, 0, -1, withscores=True)
+    else:
         if allow_unsupported:
             return b""
         raise ValueError(f"Unsupported Redis type: {typ!r}")
+    
+    return _canonical_value_bytes_from_data(val, typ)
 
 
 def digest_db(r: redis.Redis, options: Dict[str, Any], label: str = "") -> Tuple[bytes, Dict[str, Any]]:
@@ -356,6 +366,7 @@ def digest_db(r: redis.Redis, options: Dict[str, Any], label: str = "") -> Tuple
         label: Optional label for progress reporting (e.g., "A", "B")
     """
     scan_count = options["scan_count"]
+    pipeline_batch = options["pipeline_batch"]
     allow_unsupported = options["allow_unsupported_types"]
     progress_interval = options.get("progress_interval", 1000)
 
@@ -366,35 +377,98 @@ def digest_db(r: redis.Redis, options: Dict[str, Any], label: str = "") -> Tuple
     type_counts: Dict[str, int] = {}
 
     try:
+        # Collect all keys first
+        all_keys = []
         for key in iter_keys(r, scan_count):
-            key_count += 1
-            typ = r.type(key)
-            type_counts[typ] = type_counts.get(typ, 0) + 1
+            all_keys.append(key)
+        
+        # Process keys in batches using pipeline
+        for batch_start in range(0, len(all_keys), pipeline_batch):
+            batch_keys = all_keys[batch_start:batch_start + pipeline_batch]
+            
+            # Pipeline TYPE commands
+            pipe = r.pipeline(transaction=False)
+            for key in batch_keys:
+                pipe.type(key)
+            types = pipe.execute()
+            
+            # Group keys by type for batch value retrieval
+            keys_by_type: Dict[str, List[str]] = {}
+            for key, typ in zip(batch_keys, types):
+                if typ not in keys_by_type:
+                    keys_by_type[typ] = []
+                keys_by_type[typ].append(key)
+                type_counts[typ] = type_counts.get(typ, 0) + 1
+            
+            # Fetch values by type using pipeline
+            values_map: Dict[str, bytes] = {}
+            
+            for typ, keys in keys_by_type.items():
+                pipe = r.pipeline(transaction=False)
+                
+                for key in keys:
+                    if typ == "string":
+                        pipe.get(key)
+                    elif typ == "hash":
+                        pipe.hgetall(key)
+                    elif typ == "list":
+                        pipe.lrange(key, 0, -1)
+                    elif typ == "set":
+                        pipe.smembers(key)
+                    elif typ == "zset":
+                        pipe.zrange(key, 0, -1, withscores=True)
+                    else:
+                        # Unsupported type
+                        if allow_unsupported:
+                            values_map[key] = b""
+                        else:
+                            unsupported_count += 1
+                
+                if typ in ["string", "hash", "list", "set", "zset"]:
+                    results = pipe.execute()
+                    
+                    # Convert results to canonical bytes
+                    for key, val in zip(keys, results):
+                        try:
+                            values_map[key] = _canonical_value_bytes_from_data(val, typ)
+                        except ValueError:
+                            unsupported_count += 1
+                            if not allow_unsupported:
+                                _die(
+                                    f"Encountered unsupported type '{typ}' for key '{key}'. "
+                                    f"Set options.allow_unsupported_types=true to skip.\n"
+                                    f"Type counts so far: {type_counts}",
+                                    code=4,
+                                )
+                            values_map[key] = b""
+            
+            # Process each key in batch
+            for key, typ in zip(batch_keys, types):
+                key_count += 1
+                
+                if key not in values_map:
+                    if not allow_unsupported:
+                        _die(
+                            f"Encountered unsupported type '{typ}' for key '{key}'. "
+                            f"Set options.allow_unsupported_types=true to skip.\n"
+                            f"Type counts so far: {type_counts}",
+                            code=4,
+                        )
+                    continue
+                
+                val_bytes = values_map[key]
 
-            try:
-                val_bytes = canonical_value_bytes(r, key, typ, allow_unsupported)
-            except ValueError:
-                unsupported_count += 1
-                if not allow_unsupported:
-                    _die(
-                        f"Encountered unsupported type '{typ}' for key '{key}'. "
-                        f"Set options.allow_unsupported_types=true to skip.\n"
-                        f"Type counts so far: {type_counts}",
-                        code=4,
-                    )
-                continue
+                # Build canonical representation: key + "\0" + type + "\0" + value
+                key_bytes = key.encode("utf-8") if isinstance(key, str) else key
+                typ_bytes = typ.encode("utf-8") if isinstance(typ, str) else typ
+                canonical = key_bytes + b"\0" + typ_bytes + b"\0" + val_bytes
 
-            # Build canonical representation: key + "\0" + type + "\0" + value
-            key_bytes = key.encode("utf-8") if isinstance(key, str) else key
-            typ_bytes = typ.encode("utf-8") if isinstance(typ, str) else typ
-            canonical = key_bytes + b"\0" + typ_bytes + b"\0" + val_bytes
+                # Hash and XOR into accumulator
+                h = hashlib.sha256(canonical).digest()
+                for i in range(32):
+                    accumulator[i] ^= h[i]
 
-            # Hash and XOR into accumulator
-            h = hashlib.sha256(canonical).digest()
-            for i in range(32):
-                accumulator[i] ^= h[i]
-
-            total_bytes += len(canonical)
+                total_bytes += len(canonical)
             
             # Progress reporting
             if label and key_count % progress_interval == 0:
