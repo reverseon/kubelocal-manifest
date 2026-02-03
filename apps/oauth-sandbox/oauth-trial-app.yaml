@@ -76,8 +76,8 @@ spec:
         - name: ELASTICACHE_PASSWORD
           valueFrom:
             secretKeyRef:
-              name: redis-password
-              key: password
+              name: redis-elasticache-secret
+              key: REDIS_ELASTICACHE_PASSWORD
         readinessProbe:
           httpGet:
             path: /
