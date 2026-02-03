@@ -4,15 +4,10 @@ metadata:
   name: oauth-config
   namespace: oauth-sandbox
 data:
-  OAUTH_CLIENT_ID: "LMYXFzL4kUidstdyBrukWtWVozc7y8yR2TlnmRkr"
-  OPENID_CONFIGURATION_URL: "https://authentik.kube.ishiori.lnet/application/o/rails-session-login-test/.well-known/openid-configuration"
-  OAUTH_ISSUER: "https://authentik.kube.ishiori.lnet/application/o/rails-session-login-test/"
-  OAUTH_SITE: "https://authentik.kube.ishiori.lnet/application/o/rails-session-login-test/"
-  OAUTH_AUTHORIZE_URL: "https://authentik.kube.ishiori.lnet/application/o/authorize/"
-  OAUTH_TOKEN_URL: "https://authentik.kube.ishiori.lnet/application/o/token/"
-  OAUTH_USER_INFO_URL: "https://authentik.kube.ishiori.lnet/application/o/userinfo/"
-  OAUTH_LOGOUT_URL: "https://authentik.kube.ishiori.lnet/application/o/rails-session-login-test/end-session/"
-  OAUTH_JWKS_URL: "https://authentik.kube.ishiori.lnet/application/o/rails-session-login-test/jwks/"
+  AUTHENTIK_ISSUER: "https://authentik.kube.ishiori.lnet/application/o/rails-session-login-test/"
+  AUTHENTIK_CLIENT_ID: "LMYXFzL4kUidstdyBrukWtWVozc7y8yR2TlnmRkr"
+  AUTH_BASE_URL: "https://oauth-trial.kube.ishiori.lnet"
+  AUTHENTIK_REDIRECT_PATH: "/auth/authentik/callback"
   USE_SENTINEL: "true"
   REDIS_SENTINEL_HOST: "redis-sentinel.oauth-sandbox.svc.cluster.local"
   REDIS_SENTINEL_PORT: "26379"
@@ -54,7 +49,7 @@ spec:
             secretKeyRef:
               name: oauth-secret-key-base
               key: SECRET_KEY_BASE
-        - name: OAUTH_CLIENT_SECRET
+        - name: AUTHENTIK_CLIENT_SECRET
           valueFrom:
             secretKeyRef:
               name: oauth-secret
