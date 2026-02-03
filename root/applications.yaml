@@ -37,6 +37,12 @@ spec:
       destination:
         server: https://kubernetes.default.svc
         namespace: '{{path.basename}}'
+      ignoreDifferences:
+      - group: ""
+        kind: PersistentVolumeClaim
+        jsonPointers:
+        - /spec/volumeName
+        - /spec/storageClassName
       syncPolicy:
         retry:
           limit: 5
