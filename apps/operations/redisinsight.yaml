@@ -4,6 +4,7 @@ metadata:
   name: redisinsight-pvc
   namespace: operations
 spec:
+  storageClassName: local-path
   accessModes:
     - ReadWriteOnce
   resources:

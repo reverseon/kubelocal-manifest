@@ -4,6 +4,7 @@ metadata:
   name: opebox-root-pvc
   namespace: operations
 spec:
+  storageClassName: local-path
   accessModes:
     - ReadWriteOnce
   resources:
