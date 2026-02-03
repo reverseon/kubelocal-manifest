@@ -31,13 +31,32 @@ b:
 
 # Options (all optional with defaults shown)
 options:
+  # scan_count: Hint for Redis SCAN command - how many keys to return per SCAN iteration.
+  #   Affects: Key enumeration memory usage and SCAN call frequency.
+  #   Higher = fewer SCAN calls, more memory per iteration.
+  #   Default is usually sufficient. Minimal impact on latency.
   scan_count: 1000
+  
+  # pipeline_batch: Number of Redis commands batched into single pipeline execution.
+  #   Affects: Network round-trips for TYPE/GET/HGETALL/LRANGE/SMEMBERS/ZRANGE commands.
+  #   Higher = fewer network round-trips, faster performance on high-latency connections.
+  #   CRITICAL FOR HIGH LATENCY: Increase to 5000-10000 for slow networks.
+  #   Example: 10k keys with batch=1000 → 20 round-trips vs batch=5000 → 4 round-trips
+  #   Progress is reported after each batch completes.
   pipeline_batch: 1000
+  
+  # allow_unsupported_types: Skip keys with unsupported Redis types (e.g., streams, modules).
   allow_unsupported_types: false
+  
+  # check_values: In diff mode, compare actual values (not just key presence).
+  #   Increases network usage and comparison time.
   check_values: false
+  
+  # check_ttl: In diff mode, compare TTL values between databases.
   check_ttl: false
-  ttl_tolerance: 120  # Seconds of acceptable TTL difference
-  progress_interval: 1000  # Report progress every N keys
+  
+  # ttl_tolerance: Acceptable TTL difference in seconds (when check_ttl: true).
+  ttl_tolerance: 120
 
 Usage:
 ------
@@ -92,7 +111,6 @@ except Exception as e:
 
 
 DEFAULT_DECODE_RESPONSES = True
-BATCH_PROGRESS_MULTIPLIER = 10
 # 17 digits preserves IEEE-754 double round-tripping for zset scores.
 FLOAT_SCORE_FORMAT = ".17g"
 
@@ -140,7 +158,6 @@ def load_config(
     options.setdefault("check_values", False)
     options.setdefault("check_ttl", False)
     options.setdefault("ttl_tolerance", 120)
-    options.setdefault("progress_interval", 1000)
 
     return a_conf, b_conf, options
 
@@ -368,7 +385,6 @@ def digest_db(r: redis.Redis, options: Dict[str, Any], label: str = "") -> Tuple
     scan_count = options["scan_count"]
     pipeline_batch = options["pipeline_batch"]
     allow_unsupported = options["allow_unsupported_types"]
-    progress_interval = options.get("progress_interval", 1000)
 
     accumulator = bytearray(32)  # 32 bytes for SHA256
     key_count = 0
@@ -470,8 +486,8 @@ def digest_db(r: redis.Redis, options: Dict[str, Any], label: str = "") -> Tuple
 
                 total_bytes += len(canonical)
             
-            # Progress reporting
-            if label and key_count % progress_interval == 0:
+            # Progress reporting after each batch
+            if label:
                 sys.stderr.write(f"[{label}] Processed {key_count} keys, {total_bytes} bytes\n")
                 sys.stderr.flush()
 
@@ -505,7 +521,6 @@ def diff_presence(
     check_ttl = options["check_ttl"]
     ttl_tolerance = options["ttl_tolerance"]
     allow_unsupported = options["allow_unsupported_types"]
-    progress_interval = options.get("progress_interval", 1000)
 
     only_in_a = []
     only_in_b = []
@@ -517,13 +532,8 @@ def diff_presence(
         sys.stderr.write("Scanning keys in database A...\n")
         sys.stderr.flush()
         keys_a = []
-        scanned_a = 0
         for key in iter_keys(a, scan_count):
             keys_a.append(key)
-            scanned_a += 1
-            if scanned_a % progress_interval == 0:
-                sys.stderr.write(f"[A] Scanned {scanned_a} keys\n")
-                sys.stderr.flush()
         
         sys.stderr.write(f"[A] Total keys: {len(keys_a)}\n")
         sys.stderr.write("Checking existence in database B...\n")
@@ -531,10 +541,6 @@ def diff_presence(
         
         # Batch EXISTS checks
         for i in range(0, len(keys_a), pipeline_batch):
-            if i > 0 and i % (progress_interval * BATCH_PROGRESS_MULTIPLIER) == 0:
-                sys.stderr.write(f"[A→B] Checked {i}/{len(keys_a)} keys for existence\n")
-                sys.stderr.flush()
-            
             batch = keys_a[i : i + pipeline_batch]
             pipe = b.pipeline(transaction=False)
             for key in batch:
@@ -544,6 +550,10 @@ def diff_presence(
             for key, exists in zip(batch, results):
                 if not exists:
                     only_in_a.append(key)
+            
+            # Progress reporting after each batch
+            sys.stderr.write(f"[A→B] Checked {i + len(batch)}/{len(keys_a)} keys for existence\n")
+            sys.stderr.flush()
         
         sys.stderr.write(f"[A→B] Completed existence check for {len(keys_a)} keys\n")
         sys.stderr.flush()
@@ -558,35 +568,118 @@ def diff_presence(
             if check_values:
                 sys.stderr.write("Checking value differences...\n")
                 sys.stderr.flush()
-                checked_values = 0
-                for key in keys_in_both:
-                    checked_values += 1
-                    if checked_values % progress_interval == 0:
-                        sys.stderr.write(f"[VALUES] Checked {checked_values}/{len(keys_in_both)} keys\n")
-                        sys.stderr.flush()
-                    typ_a = a.type(key)
-                    typ_b = b.type(key)
+                
+                for batch_start in range(0, len(keys_in_both), pipeline_batch):
+                    batch_keys = keys_in_both[batch_start:batch_start + pipeline_batch]
                     
-                    if typ_a != typ_b:
-                        # Store type mismatch info
-                        diff_values.append((key, f"type:{typ_a}", f"type:{typ_b}"))
-                        continue
+                    # Pipeline TYPE commands for both databases
+                    pipe_a = a.pipeline(transaction=False)
+                    pipe_b = b.pipeline(transaction=False)
+                    for key in batch_keys:
+                        pipe_a.type(key)
+                        pipe_b.type(key)
+                    types_a = pipe_a.execute()
+                    types_b = pipe_b.execute()
                     
-                    try:
-                        val_a = canonical_value_bytes(a, key, typ_a, allow_unsupported)
-                        val_b = canonical_value_bytes(b, key, typ_b, allow_unsupported)
+                    # Group keys by type for batch value retrieval from database A
+                    keys_by_type_a: Dict[str, List[Tuple[str, str]]] = {}  # type -> [(key, typ_b), ...]
+                    for key, typ_a, typ_b in zip(batch_keys, types_a, types_b):
+                        if typ_a != typ_b:
+                            # Store type mismatch info
+                            diff_values.append((key, f"type:{typ_a}", f"type:{typ_b}"))
+                        else:
+                            if typ_a not in keys_by_type_a:
+                                keys_by_type_a[typ_a] = []
+                            keys_by_type_a[typ_a].append((key, typ_b))
+                    
+                    # Fetch values from database A using pipeline
+                    values_a: Dict[str, bytes] = {}
+                    for typ, key_pairs in keys_by_type_a.items():
+                        keys = [k for k, _ in key_pairs]
+                        pipe = a.pipeline(transaction=False)
                         
-                        if val_a != val_b:
-                            # Store actual values (hex for binary safety)
-                            diff_values.append((key, val_a.hex(), val_b.hex()))
-                    except ValueError:
-                        # Unsupported type
-                        if not allow_unsupported:
-                            _die(
-                                f"Encountered unsupported type '{typ_a}' for key '{key}' during value check. "
-                                f"Set options.allow_unsupported_types=true to skip.",
-                                code=4,
-                            )
+                        for key in keys:
+                            if typ == "string":
+                                pipe.get(key)
+                            elif typ == "hash":
+                                pipe.hgetall(key)
+                            elif typ == "list":
+                                pipe.lrange(key, 0, -1)
+                            elif typ == "set":
+                                pipe.smembers(key)
+                            elif typ == "zset":
+                                pipe.zrange(key, 0, -1, withscores=True)
+                            else:
+                                # Unsupported type
+                                if allow_unsupported:
+                                    values_a[key] = b""
+                        
+                        if typ in ["string", "hash", "list", "set", "zset"]:
+                            results = pipe.execute()
+                            
+                            for key, val in zip(keys, results):
+                                try:
+                                    values_a[key] = _canonical_value_bytes_from_data(val, typ)
+                                except ValueError:
+                                    if not allow_unsupported:
+                                        _die(
+                                            f"Encountered unsupported type '{typ}' for key '{key}' during value check. "
+                                            f"Set options.allow_unsupported_types=true to skip.",
+                                            code=4,
+                                        )
+                                    values_a[key] = b""
+                    
+                    # Fetch values from database B using pipeline
+                    values_b: Dict[str, bytes] = {}
+                    for typ, key_pairs in keys_by_type_a.items():
+                        keys = [k for k, _ in key_pairs]
+                        pipe = b.pipeline(transaction=False)
+                        
+                        for key in keys:
+                            if typ == "string":
+                                pipe.get(key)
+                            elif typ == "hash":
+                                pipe.hgetall(key)
+                            elif typ == "list":
+                                pipe.lrange(key, 0, -1)
+                            elif typ == "set":
+                                pipe.smembers(key)
+                            elif typ == "zset":
+                                pipe.zrange(key, 0, -1, withscores=True)
+                            else:
+                                # Unsupported type
+                                if allow_unsupported:
+                                    values_b[key] = b""
+                        
+                        if typ in ["string", "hash", "list", "set", "zset"]:
+                            results = pipe.execute()
+                            
+                            for key, val in zip(keys, results):
+                                try:
+                                    values_b[key] = _canonical_value_bytes_from_data(val, typ)
+                                except ValueError:
+                                    if not allow_unsupported:
+                                        _die(
+                                            f"Encountered unsupported type '{typ}' for key '{key}' during value check. "
+                                            f"Set options.allow_unsupported_types=true to skip.",
+                                            code=4,
+                                        )
+                                    values_b[key] = b""
+                    
+                    # Compare values
+                    for key in values_a:
+                        if key in values_b:
+                            val_a = values_a[key]
+                            val_b = values_b[key]
+                            
+                            if val_a != val_b:
+                                # Store actual values (hex for binary safety)
+                                diff_values.append((key, val_a.hex(), val_b.hex()))
+                    
+                    # Progress reporting after each batch
+                    checked_values = batch_start + len(batch_keys)
+                    sys.stderr.write(f"[VALUES] Checked {checked_values}/{len(keys_in_both)} keys\n")
+                    sys.stderr.flush()
                 
                 sys.stderr.write(f"[VALUES] Completed checking {len(keys_in_both)} keys\n")
                 sys.stderr.flush()
@@ -595,28 +688,39 @@ def diff_presence(
             if check_ttl:
                 sys.stderr.write("Checking TTL differences...\n")
                 sys.stderr.flush()
-                checked_ttl = 0
-                for key in keys_in_both:
-                    checked_ttl += 1
-                    if checked_ttl % progress_interval == 0:
-                        sys.stderr.write(f"[TTL] Checked {checked_ttl}/{len(keys_in_both)} keys\n")
-                        sys.stderr.flush()
-                    ttl_a = a.ttl(key)
-                    ttl_b = b.ttl(key)
+                
+                for batch_start in range(0, len(keys_in_both), pipeline_batch):
+                    batch_keys = keys_in_both[batch_start:batch_start + pipeline_batch]
                     
-                    # TTL returns -1 for keys with no expiry, -2 for keys that don't exist
-                    # Compare TTLs based on their states
-                    if ttl_a == -1 and ttl_b == -1:
-                        # Both have no expiry - match
-                        continue
-                    elif ttl_a == -1 or ttl_b == -1:
-                        # One has expiry, one doesn't - mismatch
-                        diff_ttls.append((key, ttl_a, ttl_b))
-                    elif ttl_a >= 0 and ttl_b >= 0:
-                        # Both have expiry - check tolerance
-                        if abs(ttl_a - ttl_b) > ttl_tolerance:
+                    # Pipeline TTL commands for both databases
+                    pipe_a = a.pipeline(transaction=False)
+                    pipe_b = b.pipeline(transaction=False)
+                    for key in batch_keys:
+                        pipe_a.ttl(key)
+                        pipe_b.ttl(key)
+                    ttls_a = pipe_a.execute()
+                    ttls_b = pipe_b.execute()
+                    
+                    # Compare TTLs
+                    for key, ttl_a, ttl_b in zip(batch_keys, ttls_a, ttls_b):
+                        # TTL returns -1 for keys with no expiry, -2 for keys that don't exist
+                        # Compare TTLs based on their states
+                        if ttl_a == -1 and ttl_b == -1:
+                            # Both have no expiry - match
+                            continue
+                        elif ttl_a == -1 or ttl_b == -1:
+                            # One has expiry, one doesn't - mismatch
                             diff_ttls.append((key, ttl_a, ttl_b))
-                    # If either is -2 (doesn't exist), skip (shouldn't happen as we checked existence)
+                        elif ttl_a >= 0 and ttl_b >= 0:
+                            # Both have expiry - check tolerance
+                            if abs(ttl_a - ttl_b) > ttl_tolerance:
+                                diff_ttls.append((key, ttl_a, ttl_b))
+                        # If either is -2 (doesn't exist), skip (shouldn't happen as we checked existence)
+                    
+                    # Progress reporting after each batch
+                    checked_ttl = batch_start + len(batch_keys)
+                    sys.stderr.write(f"[TTL] Checked {checked_ttl}/{len(keys_in_both)} keys\n")
+                    sys.stderr.flush()
                 
                 sys.stderr.write(f"[TTL] Completed checking {len(keys_in_both)} keys\n")
                 sys.stderr.flush()
@@ -625,23 +729,14 @@ def diff_presence(
         sys.stderr.write("Scanning keys in database B...\n")
         sys.stderr.flush()
         keys_b = []
-        scanned_b = 0
         for key in iter_keys(b, scan_count):
             keys_b.append(key)
-            scanned_b += 1
-            if scanned_b % progress_interval == 0:
-                sys.stderr.write(f"[B] Scanned {scanned_b} keys\n")
-                sys.stderr.flush()
         
         sys.stderr.write(f"[B] Total keys: {len(keys_b)}\n")
         sys.stderr.write("Checking existence in database A...\n")
         sys.stderr.flush()
         
         for i in range(0, len(keys_b), pipeline_batch):
-            if i > 0 and i % (progress_interval * BATCH_PROGRESS_MULTIPLIER) == 0:
-                sys.stderr.write(f"[B→A] Checked {i}/{len(keys_b)} keys for existence\n")
-                sys.stderr.flush()
-            
             batch = keys_b[i : i + pipeline_batch]
             pipe = a.pipeline(transaction=False)
             for key in batch:
@@ -651,6 +746,10 @@ def diff_presence(
             for key, exists in zip(batch, results):
                 if not exists:
                     only_in_b.append(key)
+            
+            # Progress reporting after each batch
+            sys.stderr.write(f"[B→A] Checked {i + len(batch)}/{len(keys_b)} keys for existence\n")
+            sys.stderr.flush()
         
         sys.stderr.write(f"[B→A] Completed existence check for {len(keys_b)} keys\n")
         sys.stderr.write("Comparison complete.\n")
