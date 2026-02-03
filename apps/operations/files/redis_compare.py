@@ -164,13 +164,16 @@ def connect(conf: Dict[str, Any]) -> redis.Redis:
         decode_responses = conf.get("decode_responses", DEFAULT_DECODE_RESPONSES)
 
         try:
-            r = redis.Redis.from_url(
-                url,
-                password=password,
-                socket_timeout=socket_timeout,
-                decode_responses=decode_responses,
-                ssl_cert_reqs=None,
-            )
+            connection_kwargs = {
+                "password": password,
+                "socket_timeout": socket_timeout,
+                "decode_responses": decode_responses,
+            }
+            # Only add ssl_cert_reqs if using SSL (rediss://)
+            if url.startswith("rediss://"):
+                connection_kwargs["ssl_cert_reqs"] = None
+            
+            r = redis.Redis.from_url(url, **connection_kwargs)
         except Exception as e:
             _die(f"Failed to create Redis client from URL: {e!r}", code=3)
 
@@ -207,26 +210,39 @@ def connect(conf: Dict[str, Any]) -> redis.Redis:
             sentinels.append((host, port))
 
         try:
+            # Check if SSL is configured
+            use_ssl = conf.get("ssl", False) or conf.get("use_ssl", False)
+            
+            sentinel_kwargs = {
+                "password": password,
+                "socket_timeout": socket_timeout,
+                "decode_responses": decode_responses,
+            }
+            
+            sentinel_init_kwargs = {
+                "socket_timeout": socket_timeout,
+                "decode_responses": decode_responses,
+            }
+            
+            master_kwargs = {
+                "password": password,
+                "db": db,
+                "socket_timeout": socket_timeout,
+                "decode_responses": decode_responses,
+            }
+            
+            # Only add SSL params if SSL is enabled
+            if use_ssl:
+                sentinel_kwargs["ssl_cert_reqs"] = None
+                sentinel_init_kwargs["ssl_cert_reqs"] = None
+                master_kwargs["ssl_cert_reqs"] = None
+            
             sentinel = Sentinel(
                 sentinels,
-                socket_timeout=socket_timeout,
-                decode_responses=decode_responses,
-                ssl_cert_reqs=None,
-                sentinel_kwargs={
-                    "password": password,
-                    "socket_timeout": socket_timeout,
-                    "decode_responses": decode_responses,
-                    "ssl_cert_reqs": None,
-                },
+                **sentinel_init_kwargs,
+                sentinel_kwargs=sentinel_kwargs,
             )
-            r = sentinel.master_for(
-                master_name,
-                password=password,
-                db=db,
-                socket_timeout=socket_timeout,
-                decode_responses=decode_responses,
-                ssl_cert_reqs=None,
-            )
+            r = sentinel.master_for(master_name, **master_kwargs)
         except Exception as e:
             _die(f"Failed to create Redis client via Sentinel: {e!r}", code=3)
 

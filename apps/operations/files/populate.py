@@ -144,14 +144,17 @@ def main(argv: Sequence[str]) -> int:
     if redis_url:
         # Direct connection via URL
         try:
-            r = redis.from_url(
-                redis_url,
-                password=password,
-                db=db,
-                socket_timeout=timeout_s,
-                decode_responses=True,
-                ssl_cert_reqs=None,
-            )
+            connection_kwargs = {
+                "password": password,
+                "db": db,
+                "socket_timeout": timeout_s,
+                "decode_responses": True,
+            }
+            # Only add ssl_cert_reqs if using SSL (rediss://)
+            if redis_url.startswith("rediss://"):
+                connection_kwargs["ssl_cert_reqs"] = None
+            
+            r = redis.from_url(redis_url, **connection_kwargs)
             r.ping()
         except RedisError as e:
             _die(f"failed to connect/ping Redis via URL ({redis_url}): {e!r}", code=3)
@@ -159,15 +162,21 @@ def main(argv: Sequence[str]) -> int:
     elif redis_host:
         # Direct connection via host:port
         try:
-            r = redis.Redis(
-                host=redis_host,
-                port=redis_port,
-                password=password,
-                db=db,
-                socket_timeout=timeout_s,
-                decode_responses=True,
-                ssl_cert_reqs=None,
-            )
+            connection_kwargs = {
+                "host": redis_host,
+                "port": redis_port,
+                "password": password,
+                "db": db,
+                "socket_timeout": timeout_s,
+                "decode_responses": True,
+            }
+            # Check if SSL should be used
+            use_ssl = os.environ.get("REDIS_SSL", "").lower() in ("true", "1", "yes")
+            if use_ssl:
+                connection_kwargs["ssl"] = True
+                connection_kwargs["ssl_cert_reqs"] = None
+            
+            r = redis.Redis(**connection_kwargs)
             r.ping()
         except RedisError as e:
             _die(f"failed to connect/ping Redis at {redis_host}:{redis_port}: {e!r}", code=3)
@@ -182,23 +191,44 @@ def main(argv: Sequence[str]) -> int:
         
         sentinels = parse_sentinels(sentinel_hosts)
         
+        # Check if SSL should be used
+        use_ssl = os.environ.get("REDIS_SSL", "").lower() in ("true", "1", "yes")
+        
+        sentinel_kwargs = {
+            "password": password,
+            "socket_timeout": timeout_s,
+            "decode_responses": True,
+        }
+        
+        sentinel_init_kwargs = {
+            "socket_timeout": timeout_s,
+            "decode_responses": True,
+        }
+        
+        master_kwargs = {
+            "password": password,
+            "db": db,
+            "socket_timeout": timeout_s,
+            "decode_responses": True,
+        }
+        
+        # Only add SSL params if SSL is enabled
+        if use_ssl:
+            sentinel_kwargs["ssl"] = True
+            sentinel_kwargs["ssl_cert_reqs"] = None
+            sentinel_init_kwargs["ssl"] = True
+            sentinel_init_kwargs["ssl_cert_reqs"] = None
+            master_kwargs["ssl"] = True
+            master_kwargs["ssl_cert_reqs"] = None
+        
         sentinel = Sentinel(
             sentinels,
-            socket_timeout=timeout_s,
-            decode_responses=True,
-            ssl_cert_reqs=None,
-            sentinel_kwargs={"password": password, "socket_timeout": timeout_s, "decode_responses": True, "ssl_cert_reqs": None},
+            **sentinel_init_kwargs,
+            sentinel_kwargs=sentinel_kwargs,
         )
         
         # Use sentinel-discovered master; auth with same password.
-        r = sentinel.master_for(
-            master_name,
-            password=password,
-            db=db,
-            socket_timeout=timeout_s,
-            decode_responses=True,
-            ssl_cert_reqs=None,
-        )
+        r = sentinel.master_for(master_name, **master_kwargs)
         
         try:
             r.ping()
