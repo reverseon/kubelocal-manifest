@@ -169,6 +169,7 @@ def connect(conf: Dict[str, Any]) -> redis.Redis:
                 password=password,
                 socket_timeout=socket_timeout,
                 decode_responses=decode_responses,
+                ssl_cert_reqs=None,
             )
         except Exception as e:
             _die(f"Failed to create Redis client from URL: {e!r}", code=3)
@@ -210,10 +211,12 @@ def connect(conf: Dict[str, Any]) -> redis.Redis:
                 sentinels,
                 socket_timeout=socket_timeout,
                 decode_responses=decode_responses,
+                ssl_cert_reqs=None,
                 sentinel_kwargs={
                     "password": password,
                     "socket_timeout": socket_timeout,
                     "decode_responses": decode_responses,
+                    "ssl_cert_reqs": None,
                 },
             )
             r = sentinel.master_for(
@@ -222,6 +225,7 @@ def connect(conf: Dict[str, Any]) -> redis.Redis:
                 db=db,
                 socket_timeout=socket_timeout,
                 decode_responses=decode_responses,
+                ssl_cert_reqs=None,
             )
         except Exception as e:
             _die(f"Failed to create Redis client via Sentinel: {e!r}", code=3)

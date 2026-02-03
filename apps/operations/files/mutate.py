@@ -190,6 +190,7 @@ def main(argv: List[str]) -> int:
                 db=db,
                 socket_timeout=timeout_s,
                 decode_responses=True,
+                ssl_cert_reqs=None,
             )
             r.ping()
         except RedisError as e:
@@ -204,6 +205,7 @@ def main(argv: List[str]) -> int:
                 db=db,
                 socket_timeout=timeout_s,
                 decode_responses=True,
+                ssl_cert_reqs=None,
             )
             r.ping()
         except RedisError as e:
@@ -222,7 +224,8 @@ def main(argv: List[str]) -> int:
             sentinels,
             socket_timeout=timeout_s,
             decode_responses=True,
-            sentinel_kwargs={"password": password, "socket_timeout": timeout_s, "decode_responses": True},
+            ssl_cert_reqs=None,
+            sentinel_kwargs={"password": password, "socket_timeout": timeout_s, "decode_responses": True, "ssl_cert_reqs": None},
         )
         
         r = sentinel.master_for(
@@ -231,6 +234,7 @@ def main(argv: List[str]) -> int:
             db=db,
             socket_timeout=timeout_s,
             decode_responses=True,
+            ssl_cert_reqs=None,
         )
         
         try:

@@ -150,6 +150,7 @@ def main(argv: Sequence[str]) -> int:
                 db=db,
                 socket_timeout=timeout_s,
                 decode_responses=True,
+                ssl_cert_reqs=None,
             )
             r.ping()
         except RedisError as e:
@@ -165,6 +166,7 @@ def main(argv: Sequence[str]) -> int:
                 db=db,
                 socket_timeout=timeout_s,
                 decode_responses=True,
+                ssl_cert_reqs=None,
             )
             r.ping()
         except RedisError as e:
@@ -184,7 +186,8 @@ def main(argv: Sequence[str]) -> int:
             sentinels,
             socket_timeout=timeout_s,
             decode_responses=True,
-            sentinel_kwargs={"password": password, "socket_timeout": timeout_s, "decode_responses": True},
+            ssl_cert_reqs=None,
+            sentinel_kwargs={"password": password, "socket_timeout": timeout_s, "decode_responses": True, "ssl_cert_reqs": None},
         )
         
         # Use sentinel-discovered master; auth with same password.
@@ -194,6 +197,7 @@ def main(argv: Sequence[str]) -> int:
             db=db,
             socket_timeout=timeout_s,
             decode_responses=True,
+            ssl_cert_reqs=None,
         )
         
         try:
