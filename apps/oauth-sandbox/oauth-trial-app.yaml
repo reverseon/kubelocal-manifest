@@ -11,6 +11,7 @@ data:
   USE_SENTINEL: "true"
   REDIS_SENTINEL_HOST: "redis-sentinel.oauth-sandbox.svc.cluster.local"
   REDIS_SENTINEL_PORT: "26379"
+  REDIS_URL: "redis://cluster_name:6379"
 ---
 apiVersion: apps/v1
 kind: Deployment
