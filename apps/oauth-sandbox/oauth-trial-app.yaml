@@ -8,10 +8,20 @@ data:
   AUTHENTIK_CLIENT_ID: "LMYXFzL4kUidstdyBrukWtWVozc7y8yR2TlnmRkr"
   AUTH_BASE_URL: "https://oauth-trial.kube.ishiori.lnet"
   AUTHENTIK_REDIRECT_PATH: "/auth/authentik/callback"
-  USE_SENTINEL: "true"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: redis-config
+  namespace: oauth-sandbox
+data:
+  USE_SENTINEL: "false"
+  USE_ELASTICACHE: "true"
   REDIS_SENTINEL_HOST: "redis-sentinel.oauth-sandbox.svc.cluster.local"
   REDIS_SENTINEL_PORT: "26379"
   REDIS_URL: "redis://cluster_name:6379"
+  ELASTICACHE_HOST: "localhost"
+  ELASTICACHE_PORT: "6379"
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -29,6 +39,7 @@ spec:
       labels:
         app: oauth-trial-app
     spec:
+      hostNetwork: true
       hostAliases:
       - ip: "192.168.194.1"
         hostnames:
@@ -44,6 +55,8 @@ spec:
         envFrom:
         - configMapRef:
             name: oauth-config
+        - configMapRef:
+            name: redis-config
         env:
         - name: SECRET_KEY_BASE
           valueFrom:
@@ -56,6 +69,11 @@ spec:
               name: oauth-secret
               key: OAUTH_CLIENT_SECRET
         - name: REDIS_SENTINEL_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: redis-password
+              key: password
+        - name: ELASTICACHE_PASSWORD
           valueFrom:
             secretKeyRef:
               name: redis-password
