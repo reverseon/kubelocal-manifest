@@ -21,7 +21,7 @@ a:
 b:
   mode: sentinel
   sentinels:
-    - host: redis-sentinel.sidekiq-sandbox.svc.cluster.local
+    - host: your-host-here
       port: 26379
   master_name: cluster_name
   password: yourpass
@@ -91,6 +91,12 @@ except Exception as e:
     )
 
 
+DEFAULT_DECODE_RESPONSES = True
+BATCH_PROGRESS_MULTIPLIER = 10
+# 17 digits preserves IEEE-754 double round-tripping for zset scores.
+FLOAT_SCORE_FORMAT = ".17g"
+
+
 def _die(msg: str, code: int = 2) -> None:
     """Print error message to stderr and exit."""
     sys.stderr.write(msg.rstrip() + "\n")
@@ -155,7 +161,7 @@ def connect(conf: Dict[str, Any]) -> redis.Redis:
         
         password = conf.get("password")
         socket_timeout = conf.get("socket_timeout", 3.0)
-        decode_responses = conf.get("decode_responses", True)
+        decode_responses = conf.get("decode_responses", DEFAULT_DECODE_RESPONSES)
 
         try:
             r = redis.Redis.from_url(
@@ -179,7 +185,14 @@ def connect(conf: Dict[str, Any]) -> redis.Redis:
         password = conf.get("password")
         db = conf.get("db", 0)
         socket_timeout = conf.get("socket_timeout", 3.0)
-        decode_responses = conf.get("decode_responses", True)
+        decode_responses = conf.get("decode_responses", DEFAULT_DECODE_RESPONSES)
+
+        if password in (None, ""):
+            sys.stderr.write(
+                "Warning: Sentinel password is empty or unset. "
+                "Verify this is intended for your environment.\n"
+            )
+            sys.stderr.flush()
 
         # Parse sentinels list
         sentinels = []
@@ -245,10 +258,12 @@ def canonical_value_bytes(r: redis.Redis, key: str, typ: str, allow_unsupported:
         val = r.get(key)
         if val is None:
             return b""
-        # redis-py with decode_responses=True returns str
+        # redis-py with decode_responses=True returns str; False returns bytes.
         if isinstance(val, str):
             return val.encode("utf-8")
-        return val
+        if isinstance(val, (bytes, bytearray, memoryview)):
+            return bytes(val)
+        return bytes(val)
 
     elif typ == "hash":
         # HGETALL returns dict
@@ -300,7 +315,7 @@ def canonical_value_bytes(r: redis.Redis, key: str, typ: str, allow_unsupported:
             if isinstance(member, str):
                 member = member.encode("utf-8")
             # Normalize score representation
-            score_str = f"{score:.17g}".encode("utf-8")
+            score_str = f"{score:{FLOAT_SCORE_FORMAT}}".encode("utf-8")
             parts.append(member + b"\0" + score_str)
         return b"\0".join(parts)
 
@@ -422,7 +437,7 @@ def diff_presence(
         
         # Batch EXISTS checks
         for i in range(0, len(keys_a), pipeline_batch):
-            if i > 0 and i % (progress_interval * 10) == 0:
+            if i > 0 and i % (progress_interval * BATCH_PROGRESS_MULTIPLIER) == 0:
                 sys.stderr.write(f"[A→B] Checked {i}/{len(keys_a)} keys for existence\n")
                 sys.stderr.flush()
             
@@ -529,7 +544,7 @@ def diff_presence(
         sys.stderr.flush()
         
         for i in range(0, len(keys_b), pipeline_batch):
-            if i > 0 and i % (progress_interval * 10) == 0:
+            if i > 0 and i % (progress_interval * BATCH_PROGRESS_MULTIPLIER) == 0:
                 sys.stderr.write(f"[B→A] Checked {i}/{len(keys_b)} keys for existence\n")
                 sys.stderr.flush()
             
