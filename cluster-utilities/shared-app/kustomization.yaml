@@ -6,3 +6,4 @@ resources:
 - global-pwd.yaml
 - redis.yaml
 - postgresql.yaml
+- host-proxy.yaml
