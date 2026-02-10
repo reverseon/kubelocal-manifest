@@ -70,4 +70,29 @@ spec:
     port: 32081
     targetPort: http
     nodePort: 32081
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: redisinsight
+  namespace: operations
+  annotations:
+    cert-manager.io/cluster-issuer: ishiori-local-general-issuer
+spec:
+  ingressClassName: nginx
+  tls:
+  - hosts:
+    - redisinsight.kube.ishiori.lnet
+    secretName: redisinsight-tls
+  rules:
+  - host: redisinsight.kube.ishiori.lnet
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: redisinsight
+            port:
+              number: 32081
 
