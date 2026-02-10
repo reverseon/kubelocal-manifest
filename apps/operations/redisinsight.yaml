@@ -28,7 +28,6 @@ spec:
       labels:
         app: redisinsight
     spec:
-      hostNetwork: true
       dnsPolicy: ClusterFirstWithHostNet
       securityContext:
         runAsNonRoot: true

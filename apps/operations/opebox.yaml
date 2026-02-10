@@ -28,7 +28,6 @@ spec:
       labels:
         app: opebox
     spec:
-      hostNetwork: true
       containers:
       - name: netshoot
         image: nicolaka/netshoot:latest
@@ -58,48 +57,4 @@ spec:
       - name: opebox-root
         persistentVolumeClaim:
           claimName: opebox-root-pvc
-      restartPolicy: Always
----
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: opebox-no-hostnetwork
-  namespace: operations
-  labels:
-    app: opebox-no-hostnetwork
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: opebox-no-hostnetwork
-  template:
-    metadata:
-      labels:
-        app: opebox-no-hostnetwork
-    spec:
-      hostNetwork: false
-      containers:
-      - name: netshoot
-        image: nicolaka/netshoot:latest
-        command: ["sleep", "infinity"]
-        resources:
-          requests:
-            memory: "256Mi"
-            cpu: "100m"
-          limits:
-            memory: "512Mi"
-            cpu: "200m"
-        volumeMounts:
-        - name: ephemeral-storage
-          mountPath: /tmp
-        - name: static-files
-          mountPath: /static
-          readOnly: true
-      volumes:
-      - name: ephemeral-storage
-        emptyDir: {}
-      - name: static-files
-        configMap:
-          name: static-files
-          defaultMode: 0755
       restartPolicy: Always
