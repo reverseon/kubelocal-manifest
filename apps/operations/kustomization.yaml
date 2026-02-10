@@ -3,6 +3,7 @@ kind: Kustomization
 namespace: operations
 resources:
 - namespace.yaml
+- aws-credentials-secret.yaml
 - opebox.yaml
 - redisinsight.yaml
 

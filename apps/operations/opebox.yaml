@@ -32,6 +32,9 @@ spec:
       - name: netshoot
         image: nicolaka/netshoot:latest
         command: ["sleep", "infinity"]
+        envFrom:
+        - secretRef:
+            name: aws-credentials
         resources:
           requests:
             memory: "256Mi"
